@@ -136,7 +136,7 @@ results = Client.execute!(
   :api_method => Gmail_api.users.messages.list,
   :parameters => { :userId => 'me', :q => "in:inbox is:unread" })
 
-$logger.info "no messages found" if results.data.messages.empty?
+$logger.info "#{results.data.messages.length} messages found"
 
 results.data.messages.each { |message|
   # See https://developers.google.com/gmail/api/v1/reference/users/messages/get
@@ -148,9 +148,11 @@ results.data.messages.each { |message|
   # See https://developers.google.com/gmail/api/v1/reference/users/messages#methods
   headers = {}
   content.data.payload.headers.each { |header|
-    $logger.debug puts header.name
+    $logger.debug header.name
     headers[header.name] = header.value
   }
 
   dispatch_message message, headers
 }
+
+$logger.info 'done'
