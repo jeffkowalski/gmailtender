@@ -97,11 +97,25 @@ def process_transfer message, headers
 end
 
 
+def process_pershing_statement message, headers
+  $logger.info '(process pershing statement)'
+  detail = ''
+  response = make_org_entry 'account statement available :pershing:', '@quicken', '#C', "<#{Time.now.strftime('%F %a')}>", detail + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  if (response.code == '200')
+    archive message
+  else
+    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+  end
+end
+
+
 def dispatch_message message, headers
   $logger.debug headers['Subject']
   $logger.debug headers['From']
   if headers['Subject'] == "Transfer Money Notice" && headers['From'] == 'Capital One 360 <saver@capitalone360.com>'
     process_transfer message, headers
+  elsif headers['Subject'] =='Brokerage Account Statement Notification' && headers['From'] == '<pershing@advisor.netxinvestor.com>'
+    process_pershing_statement message, headers
   end
 end
 
