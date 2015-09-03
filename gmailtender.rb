@@ -76,7 +76,7 @@ end
 
 
 def process_transfer message, headers
-  $logger.info '(process transfer)'
+  $logger.info "(#{__method__})"
   content_raw = Client.execute!(
     :api_method => Gmail_api.users.messages.get,
     :parameters => { :userId => 'me', :id => message.id, :format => 'raw'})
@@ -98,9 +98,21 @@ end
 
 
 def process_pershing_statement message, headers
-  $logger.info '(process pershing statement)'
-  detail = ''
+  $logger.info "(#{__method__})"
+detail = ''
   response = make_org_entry 'account statement available :pershing:', '@quicken', '#C', "<#{Time.now.strftime('%F %a')}>", detail + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  if (response.code == '200')
+    archive message
+  else
+    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+  end
+end
+
+
+def process_pge_statement message, headers
+  $logger.info "(#{__method__})"
+  detail = ''
+  response = make_org_entry 'pg&e statement', '@quicken', '#C', "<#{Time.now.strftime('%F %a')}>", detail + "http://www.pge.com/MyEnergy\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
     archive message
   else
@@ -116,6 +128,8 @@ def dispatch_message message, headers
     process_transfer message, headers
   elsif headers['Subject'] =='Brokerage Account Statement Notification' && headers['From'] == '<pershing@advisor.netxinvestor.com>'
     process_pershing_statement message, headers
+  elsif headers['Subject'] =='Your PG&E Energy Statement is Ready to View' && headers['From'] == 'CustomerServiceOnline@pge.com'
+    process_pge_statement message, headers
   end
 end
 
