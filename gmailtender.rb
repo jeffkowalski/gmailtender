@@ -132,6 +132,19 @@ def process_chase_mortgage message, headers
   end
 end
 
+
+def process_peets_reload message, headers
+  $logger.info "(#{__method__})"
+  detail = '$50'
+  response = make_org_entry 'peet\'s card reload order :amex:', '@quicken', '#C', "<#{Time.now.strftime('%F %a')}>", detail
+  if (response.code == '200')
+    archive message
+  else
+    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+  end
+end
+
+
 def dispatch_message message, headers
   $logger.debug headers['Subject']
   $logger.debug headers['From']
@@ -143,6 +156,8 @@ def dispatch_message message, headers
     process_pge_statement message, headers
   elsif headers['Subject'] == 'Your mortgage statement is available online.' && headers['From'] == 'Chase <no-reply@alertsp.chase.com>'
     process_chase_mortgage message, headers
+  elsif headers['Subject'].include?("Your Peet's Card Reload Order") && headers['From'] == 'Customer Service <customerservice@peets.com>'
+    process_peets_reload message, headers
   end
 end
 
