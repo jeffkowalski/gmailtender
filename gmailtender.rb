@@ -9,6 +9,7 @@ require 'fileutils'
 require 'logger'
 require "net/http"
 require "uri"
+require 'base64'
 
 LOGFILE = "/home/jeff/.gmailtender.log"
 
@@ -129,17 +130,42 @@ def process_pershing_statement message, headers
 end
 
 
-def process_pge_statement message, headers
+def get_body message
+  results = Client.execute!(
+    :api_method => Gmail_api.users.messages.get,
+    :parameters => { :userId => 'me', :id => message.id})
+  message_json = JSON.parse(results.data.to_json())
+  mime_data = Base64.urlsafe_decode64(message_json['payload']['body']['data'])
+  return mime_data
+end
+
+
+def process_paypal_statement message, headers
   $logger.info "(#{__method__})"
-  detail = ''
-  response = make_org_entry 'pg&e statement available', '@quicken', '#C',
+  body = get_body message
+  detail = '' + body[/<a.*?href="(.*?)".*?View Statement<\/a>/m, 1] + "\n"
+  response = make_org_entry 'account statement available :paypal:', '@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
-                            detail + "http://www.pge.com/MyEnergy\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
+                            detail + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
     archive message
   else
     $logger.error("make_org_entry gave response @{response.code} @{response.message}")
   end
+end
+
+
+def process_pge_statement message, headers
+    $logger.info "(#{__method__})"
+    detail = ''
+    response = make_org_entry 'pg&e statement available', '@quicken', '#C',
+                              "<#{Time.now.strftime('%F %a')}>",
+                              detail + "http://www.pge.com/MyEnergy\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
+    if (response.code == '200')
+      archive message
+    else
+      $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    end
 end
 
 
@@ -170,6 +196,20 @@ def process_peets_reload message, headers
 end
 
 
+def process_comcast_bill message, headers
+  $logger.info "(#{__method__})"
+  detail = ''
+  response = make_org_entry 'comcast bill ready :amex:', '@quicken', '#C',
+                            "<#{Time.now.strftime('%F %a')}>",
+                            detail + 'https://customer.xfinity.com/Secure/MyAccount/'
+  if (response.code == '200')
+    archive message
+  else
+    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+  end
+end
+
+
 def dispatch_message message, headers
   $logger.debug headers['Subject']
   $logger.debug headers['From']
@@ -179,12 +219,16 @@ def dispatch_message message, headers
       process_capitalone_statement message, headers
   elsif headers['Subject'] =='Brokerage Account Statement Notification' && headers['From'] == '<pershing@advisor.netxinvestor.com>'
     process_pershing_statement message, headers
+  elsif headers['Subject'].include?("account statement is here") && headers['From'] == 'PayPal Statements <paypal@e.paypal.com>'
+    process_paypal_statement message, headers
   elsif headers['Subject'] =='Your PG&E Energy Statement is Ready to View' && headers['From'] == 'CustomerServiceOnline@pge.com'
     process_pge_statement message, headers
   elsif headers['Subject'] == 'Your mortgage statement is available online.' && headers['From'] == 'Chase <no-reply@alertsp.chase.com>'
     process_chase_mortgage message, headers
   elsif headers['Subject'].include?("Your Peet's Card Reload Order") && headers['From'] == 'Customer Service <customerservice@peets.com>'
     process_peets_reload message, headers
+  elsif headers['Subject'] == 'Your bill is ready' && headers['From'] == 'Comcast Online Communications <online.communications@alerts.comcast.net>'
+    process_comcast_bill message, headers
   end
 end
 
