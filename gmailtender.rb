@@ -169,10 +169,24 @@ def process_pge_statement message, headers
 end
 
 
-def process_chase_mortgage message, headers
+def process_chase_mortgage_statement message, headers
   $logger.info "(#{__method__})"
   detail = ''
   response = make_org_entry 'chase mortgage statement available :chase:', '@quicken', '#C',
+                            "<#{Time.now.strftime('%F %a')}>",
+                            detail + "https://www.chase.com"
+  if (response.code == '200')
+    archive message
+  else
+    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+  end
+end
+
+
+def process_chase_credic_card_statement message, headers
+  $logger.info "(#{__method__})"
+  detail = ''
+  response = make_org_entry 'chase credit card statement available :chase:', '@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
                             detail + "https://www.chase.com"
   if (response.code == '200')
@@ -210,25 +224,53 @@ def process_comcast_bill message, headers
 end
 
 
+def process_american_express_statement message, headers
+  $logger.info "(#{__method__})"
+  detail = 'https://online.americanexpress.com/myca/statementimage/us/welcome.do?request_type=authreg_StatementCycles&Face=en_US&sorted_index=0'
+  response = make_org_entry 'account statement available :amex:', '@quicken', '#C',
+                            "<#{Time.now.strftime('%F %a')}>",
+                            detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  if (response.code == '200')
+    archive message
+  else
+    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+  end
+end
+
+
 def dispatch_message message, headers
-  $logger.debug headers['Subject']
-  $logger.debug headers['From']
-  if headers['Subject'] == "Transfer Money Notice" && headers['From'].include?("capitalone360.com")
+  $logger.info headers['Subject']
+  $logger.info headers['From']
+  if headers['Subject'] == "Transfer Money Notice" &&
+     headers['From'].include?("capitalone360.com")
     process_transfer message, headers
-  elsif headers['Subject'].include?("eStatement's now available") && headers['From'].include?("capitalone360.com")
+  elsif headers['Subject'].include?("eStatement's now available") &&
+        headers['From'].include?("capitalone360.com")
       process_capitalone_statement message, headers
-  elsif headers['Subject'] =='Brokerage Account Statement Notification' && headers['From'] == '<pershing@advisor.netxinvestor.com>'
+  elsif headers['Subject'] =='Brokerage Account Statement Notification' &&
+        headers['From'] == '<pershing@advisor.netxinvestor.com>'
     process_pershing_statement message, headers
-  elsif headers['Subject'].include?("account statement is here") && headers['From'] == 'PayPal Statements <paypal@e.paypal.com>'
+  elsif headers['Subject'].include?("account statement is here") &&
+        headers['From'] == 'PayPal Statements <paypal@e.paypal.com>'
     process_paypal_statement message, headers
-  elsif headers['Subject'] =='Your PG&E Energy Statement is Ready to View' && headers['From'] == 'CustomerServiceOnline@pge.com'
+  elsif headers['Subject'] =='Your PG&E Energy Statement is Ready to View' &&
+        headers['From'] == 'CustomerServiceOnline@pge.com'
     process_pge_statement message, headers
-  elsif headers['Subject'] == 'Your mortgage statement is available online.' && headers['From'] == 'Chase <no-reply@alertsp.chase.com>'
-    process_chase_mortgage message, headers
-  elsif headers['Subject'].include?("Your Peet's Card Reload Order") && headers['From'] == 'Customer Service <customerservice@peets.com>'
+  elsif headers['Subject'] == 'Your mortgage statement is available online.' &&
+        headers['From'] == 'Chase <no-reply@alertsp.chase.com>'
+    process_chase_mortgage_statement message, headers
+  elsif headers['Subject'] == 'Your credit card statement is available online' &&
+        headers['From'] == 'Chase <no-reply@alertsp.chase.com>'
+    process_chase_credic_card_statement message, headers
+  elsif headers['Subject'].include?("Your Peet's Card Reload Order") &&
+        headers['From'] == 'Customer Service <customerservice@peets.com>'
     process_peets_reload message, headers
-  elsif headers['Subject'] == 'Your bill is ready' && headers['From'] == 'Comcast Online Communications <online.communications@alerts.comcast.net>'
+  elsif headers['Subject'] == 'Your bill is ready' &&
+        headers['From'] == 'Comcast Online Communications <online.communications@alerts.comcast.net>'
     process_comcast_bill message, headers
+  elsif headers['Subject'].index(/Important Notice: Your .* Statement/) &&
+        headers['From'] == 'American Express <AmericanExpress@welcome.aexp.com>'
+    process_american_express_statement message, headers
   end
 end
 
