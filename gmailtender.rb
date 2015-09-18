@@ -171,10 +171,10 @@ end
 
 def process_chase_mortgage_statement message, headers
   $logger.info "(#{__method__})"
-  detail = ''
+  detail = 'https://stmts.chase.com/stmtslist?AI=475283320'
   response = make_org_entry 'chase mortgage statement available :chase:', '@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
-                            detail + "https://www.chase.com"
+                            detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
     archive message
   else
@@ -185,10 +185,10 @@ end
 
 def process_chase_credic_card_statement message, headers
   $logger.info "(#{__method__})"
-  detail = ''
+  detail = 'https://stmts.chase.com/stmtslist?AI=16258879'
   response = make_org_entry 'chase credit card statement available :chase:', '@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
-                            detail + "https://www.chase.com"
+                            detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
     archive message
   else
