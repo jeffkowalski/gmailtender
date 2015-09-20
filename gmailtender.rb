@@ -238,6 +238,20 @@ def process_american_express_statement message, headers
 end
 
 
+def process_verizon_bill message, headers
+  $logger.info "(#{__method__})"
+  detail = 'https://ebillpay.verizonwireless.com/vzw/accountholder/mybill/BillingSummary.action'
+  response = make_org_entry 'verizon bill available :amex:', '@quicken', '#C',
+                            "<#{Time.now.strftime('%F %a')}>",
+                            detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  if (response.code == '200')
+    archive message
+  else
+    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+  end
+end
+
+
 def dispatch_message message, headers
   $logger.info headers['Subject']
   $logger.info headers['From']
@@ -271,6 +285,9 @@ def dispatch_message message, headers
   elsif headers['Subject'].index(/Important Notice: Your .* Statement/) &&
         headers['From'] == 'American Express <AmericanExpress@welcome.aexp.com>'
     process_american_express_statement message, headers
+  elsif headers['Subject'] == 'Your Bill is Now Available' &&
+        headers['From'] == 'Verizon Wireless <VZWMail@ecrmemail.verizonwireless.com>'
+    process_verizon_bill message, headers
   end
 end
 
