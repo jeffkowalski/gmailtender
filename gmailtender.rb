@@ -1,5 +1,7 @@
 #!/usr/bin/ruby
 
+# Gmail API: https://developers.google.com/gmail/api/v1/reference/users/messages#resource
+
 require 'google/api_client'
 require 'google/api_client/client_secrets'
 require 'google/api_client/auth/installed_app'
@@ -46,8 +48,6 @@ def authorize
 end
 
 
-
-
 def encodeURIcomponent str
   return URI.escape(str, Regexp.new("[^#{URI::PATTERN::UNRESERVED}]"))
 end
@@ -73,6 +73,16 @@ def archive message
     :api_method => Gmail_api.users.messages.modify,
     :parameters => { 'userId' => 'me', 'id' => message.id },
     :body_object => { 'removeLabelIds' => ['INBOX'] })
+end
+
+
+def get_body message
+  results = Client.execute!(
+    :api_method => Gmail_api.users.messages.get,
+    :parameters => { :userId => 'me', :id => message.id})
+  message_json = JSON.parse(results.data.to_json())
+  mime_data = Base64.urlsafe_decode64(message_json['payload']['body']['data'])
+  return mime_data
 end
 
 
@@ -127,16 +137,6 @@ def process_pershing_statement message, headers
   else
     $logger.error("make_org_entry gave response @{response.code} @{response.message}")
   end
-end
-
-
-def get_body message
-  results = Client.execute!(
-    :api_method => Gmail_api.users.messages.get,
-    :parameters => { :userId => 'me', :id => message.id})
-  message_json = JSON.parse(results.data.to_json())
-  mime_data = Base64.urlsafe_decode64(message_json['payload']['body']['data'])
-  return mime_data
 end
 
 
@@ -252,6 +252,39 @@ def process_verizon_bill message, headers
 end
 
 
+def process_amazon_order message, headers
+  $logger.info "(#{__method__})"
+  results = Client.execute!(
+    :api_method => Gmail_api.users.messages.get,
+    :parameters => { :userId => 'me', :id => message.id})
+  message_json = JSON.parse(results.data.to_json())
+  mime_data = message_json['payload']['parts'][0]['parts'][0]['body']['data']
+  body = Base64.urlsafe_decode64 mime_data
+  order = headers['Subject'][/Your Amazon.com order of (.*)\./, 1]
+  url = body[/View or manage your orders in Your Orders:\r\n?(https:.*?)\r\n/m, 1]
+  delivery = body[/\s*Guaranteed delivery date:\r\n\s*(.*?)\r\n/m, 1]
+  delivery = Date.parse(delivery).strftime('%F %a')
+  total = body[/Order Total: (\$.*)\r\n/, 1]
+  #$logger.info "#{order} #{url} #{delivery} #{total}"
+
+  detail = "#{url}\n#{total}"
+  response = make_org_entry "order of #{order} :amazon:", '@quicken', '#C',
+                             "<#{Time.now.strftime('%F %a')}>",
+                             detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  if (response.code == '200')
+    detail = url
+    response = make_org_entry "delivery of #{order} :amazon:", '@waiting', '#C',
+                              "<#{delivery}>",
+                              detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+    if (response.code == '200')
+      archive message
+      return
+    end
+  end
+  $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+end
+
+
 def dispatch_message message, headers
   $logger.info headers['Subject']
   $logger.info headers['From']
@@ -288,6 +321,9 @@ def dispatch_message message, headers
   elsif headers['Subject'] == 'Your Bill is Now Available' &&
         headers['From'] == 'Verizon Wireless <VZWMail@ecrmemail.verizonwireless.com>'
     process_verizon_bill message, headers
+  elsif headers['Subject'].include?('Your Amazon.com order of') &&
+        headers['From'] == '"auto-confirm@amazon.com" <auto-confirm@amazon.com>'
+    process_amazon_order message, headers
   end
 end
 
