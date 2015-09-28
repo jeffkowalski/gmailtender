@@ -285,6 +285,30 @@ def process_amazon_order message, headers
 end
 
 
+def process_amazon_video_order message, headers
+  $logger.info "(#{__method__})"
+  results = Client.execute!(
+    :api_method => Gmail_api.users.messages.get,
+    :parameters => { :userId => 'me', :id => message.id})
+  message_json = JSON.parse(results.data.to_json())
+  mime_data = message_json['payload']['parts'][0]['parts'][0]['body']['data']
+  body = Base64.urlsafe_decode64 mime_data
+  order = headers['Subject'][/Amazon.com order of (.*)\./, 1]
+  total = body[/Grand Total:\s+(\$.*)\r\n/, 1]
+  #$logger.info "#{order} #{total}"
+
+  detail = "#{total}"
+  response = make_org_entry "order of #{order} :amazon:", '@quicken', '#C',
+                             "<#{Time.now.strftime('%F %a')}>",
+                             detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  if (response.code == '200')
+    archive message
+  else
+    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+  end
+end
+
+
 def dispatch_message message, headers
   $logger.info headers['Subject']
   $logger.info headers['From']
@@ -324,6 +348,9 @@ def dispatch_message message, headers
   elsif headers['Subject'].include?('Your Amazon.com order of') &&
         headers['From'] == '"auto-confirm@amazon.com" <auto-confirm@amazon.com>'
     process_amazon_order message, headers
+  elsif headers['Subject'].include?('Amazon.com order of') &&
+        headers['From'] == '"Amazon.com" <digital-no-reply@amazon.com>'
+    process_amazon_video_order message, headers
   end
 end
 
