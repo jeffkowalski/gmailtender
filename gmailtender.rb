@@ -260,10 +260,14 @@ def process_amazon_order message, headers
   message_json = JSON.parse(results.data.to_json())
   mime_data = message_json['payload']['parts'][0]['parts'][0]['body']['data']
   body = Base64.urlsafe_decode64 mime_data
-  order = headers['Subject'][/Your Amazon.com order of (.*)\./, 1]
+  order = headers['Subject'][/Your Amazon.com order of (.*)\./, 1].downcase
   url = body[/View or manage your orders in Your Orders:\r\n?(https:.*?)\r\n/m, 1]
   delivery = body[/\s*Guaranteed delivery date:\r\n\s*(.*?)\r\n/m, 1]
-  delivery = Date.parse(delivery).strftime('%F %a')
+  if delivery.nil?
+    delivery = body[/\s*Estimated delivery date:\r\n\s*(.*?)-?\r\n/m, 1]
+  end
+  delivery = delivery.nil? ? Time.now : Date.parse(delivery)
+  delivery = delivery.strftime('%F %a')
   total = body[/Order Total: (\$.*)\r\n/, 1]
   #$logger.info "#{order} #{url} #{delivery} #{total}"
 
