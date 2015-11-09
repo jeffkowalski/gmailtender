@@ -313,6 +313,20 @@ def process_amazon_video_order message, headers
 end
 
 
+def process_amazon_subscribe_and_save message, headers
+  $logger.info "(#{__method__})"
+  detail = 'https://www.amazon.com/manageyoursubscription'
+  response = make_org_entry 'review amazon subscribe and save delivery :amazon:', '@home', '#C',
+                            "<#{Time.now.strftime('%F %a')}>",
+                            detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  if (response.code == '200')
+    archive message
+  else
+    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+  end
+end
+
+
 def process_etrade_statement message, headers
   $logger.info "(#{__method__})"
   detail = 'https://edoc.etrade.com/e/t/onlinedocs/docsearch?doc_type=stmt'
@@ -369,6 +383,9 @@ def dispatch_message message, headers
   elsif headers['Subject'].include?('Amazon.com order of') &&
         headers['From'] == '"Amazon.com" <digital-no-reply@amazon.com>'
     process_amazon_video_order message, headers
+  elsif headers['Subject'] == 'Amazon Subscribe & Save: Review Your Monthly Delivery' &&
+        headers['From'] == '"Amazon Subscribe & Save" <no-reply@amazon.com>'
+    process_amazon_subscribe_and_save message, headers
   elsif headers['Subject'] == 'You have a new account statement from E*TRADE Securities' &&
         headers['From'] == '"E*TRADE SECURITIES LLC" <etrade_stmt_mbox@statement.etradefinancial.com>'
     process_etrade_statement message, headers
