@@ -353,7 +353,7 @@ def dispatch_message message, headers
   elsif headers['Subject'] =='Brokerage Account Statement Notification' &&
         headers['From'] == '<pershing@advisor.netxinvestor.com>'
     process_pershing_statement message, headers
-  elsif headers['Subject'].include?("account statement is here") &&
+  elsif headers['Subject'].include?("account statement is available") &&
         headers['From'] == 'PayPal Statements <paypal@e.paypal.com>'
     process_paypal_statement message, headers
   elsif headers['Subject'] =='Your PG&E Energy Statement is Ready to View' &&
