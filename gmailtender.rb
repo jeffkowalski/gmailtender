@@ -99,7 +99,7 @@ def process_transfer message, headers
   #  Transferred On: 08/22/2015
   detail = content_raw.data.raw[/(Amount:.*?Transferred On:.*?\n)/m, 1]
   detail.gsub!("\015", '')
-  response = make_org_entry 'capital one transfer money notice', '@quicken', '#C',
+  response = make_org_entry 'capital one transfer money notice', 'capitalone:@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
                             detail + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
@@ -113,7 +113,7 @@ end
 def process_capitalone_statement message, headers
   $logger.info "(#{__method__})"
   detail = ''
-  response = make_org_entry 'account statement available :capitalone:', '@quicken', '#C',
+  response = make_org_entry 'account statement available', 'capitalone:@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
                             detail +
                             "https://secure.capitalone360.com/myaccount/banking/login.vm#" +
@@ -129,7 +129,7 @@ end
 def process_pershing_statement message, headers
   $logger.info "(#{__method__})"
   detail = ''
-  response = make_org_entry 'account statement available :pershing:', '@quicken', '#C',
+  response = make_org_entry 'account statement available', 'pershing:@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
                             detail + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
@@ -144,7 +144,7 @@ def process_paypal_statement message, headers
   $logger.info "(#{__method__})"
   body = get_body message
   detail = '' + body[/<a.*?href="(.*?)".*?View Statement<\/a>/m, 1] + "\n"
-  response = make_org_entry 'account statement available :paypal:', '@quicken', '#C',
+  response = make_org_entry 'account statement available', 'paypal:@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
                             detail + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
@@ -158,7 +158,7 @@ end
 def process_pge_statement message, headers
     $logger.info "(#{__method__})"
     detail = ''
-    response = make_org_entry 'pg&e statement available', '@quicken', '#C',
+    response = make_org_entry 'pg&e statement available', 'amex:@quicken', '#C',
                               "<#{Time.now.strftime('%F %a')}>",
                               detail + "http://www.pge.com/MyEnergy\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
     if (response.code == '200')
@@ -172,7 +172,7 @@ end
 def process_chase_mortgage_statement message, headers
   $logger.info "(#{__method__})"
   detail = 'https://stmts.chase.com/stmtslist?AI=475283320'
-  response = make_org_entry 'chase mortgage statement available :chase:', '@quicken', '#C',
+  response = make_org_entry 'chase mortgage statement available', 'chase:@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
                             detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
@@ -186,7 +186,7 @@ end
 def process_chase_credic_card_statement message, headers
   $logger.info "(#{__method__})"
   detail = 'https://stmts.chase.com/stmtslist?AI=16258879'
-  response = make_org_entry 'chase credit card statement available :chase:', '@quicken', '#C',
+  response = make_org_entry 'chase credit card statement available', 'chase:@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
                             detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
@@ -200,7 +200,7 @@ end
 def process_peets_reload message, headers
   $logger.info "(#{__method__})"
   detail = '$50'
-  response = make_org_entry 'peet\'s card reload order :amex:', '@quicken', '#C',
+  response = make_org_entry 'peet\'s card reload order', 'amex:@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>", detail
   if (response.code == '200')
     archive message
@@ -213,7 +213,7 @@ end
 def process_comcast_bill message, headers
   $logger.info "(#{__method__})"
   detail = ''
-  response = make_org_entry 'comcast bill ready :amex:', '@quicken', '#C',
+  response = make_org_entry 'comcast bill ready', 'amex:@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
                             detail + 'https://customer.xfinity.com/Secure/MyAccount/'
   if (response.code == '200')
@@ -227,7 +227,7 @@ end
 def process_american_express_statement message, headers
   $logger.info "(#{__method__})"
   detail = 'https://online.americanexpress.com/myca/statementimage/us/welcome.do?request_type=authreg_StatementCycles&Face=en_US&sorted_index=0'
-  response = make_org_entry 'account statement available :amex:', '@quicken', '#C',
+  response = make_org_entry 'account statement available', 'amex:@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
                             detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
@@ -241,7 +241,7 @@ end
 def process_verizon_bill message, headers
   $logger.info "(#{__method__})"
   detail = 'https://ebillpay.verizonwireless.com/vzw/accountholder/mybill/BillingSummary.action'
-  response = make_org_entry 'verizon bill available :amex:', '@quicken', '#C',
+  response = make_org_entry 'verizon bill available', 'amex:@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
                             detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
@@ -272,12 +272,12 @@ def process_amazon_order message, headers
   #$logger.info "#{order} #{url} #{delivery} #{total}"
 
   detail = "#{url}\n#{total}"
-  response = make_org_entry "order of #{order} :amazon:", '@quicken', '#C',
+  response = make_org_entry "order of #{order}", 'amazon:@quicken', '#C',
                              "<#{Time.now.strftime('%F %a')}>",
                              detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
     detail = url
-    response = make_org_entry "delivery of #{order} :amazon:", '@waiting', '#C',
+    response = make_org_entry "delivery of #{order}", 'amazon:@waiting', '#C',
                               "<#{delivery}>",
                               detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
     if (response.code == '200')
@@ -302,7 +302,7 @@ def process_amazon_video_order message, headers
   #$logger.info "#{order} #{total}"
 
   detail = "#{total}"
-  response = make_org_entry "order of #{order} :amazon:", '@quicken', '#C',
+  response = make_org_entry "order of #{order}", 'amazon:@quicken', '#C',
                              "<#{Time.now.strftime('%F %a')}>",
                              detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
@@ -316,7 +316,7 @@ end
 def process_amazon_subscribe_and_save message, headers
   $logger.info "(#{__method__})"
   detail = 'https://www.amazon.com/manageyoursubscription'
-  response = make_org_entry 'review amazon subscribe and save delivery :amazon:', '@home', '#C',
+  response = make_org_entry 'review amazon subscribe and save delivery', 'amazon:@home', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
                             detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
@@ -330,7 +330,7 @@ end
 def process_etrade_statement message, headers
   $logger.info "(#{__method__})"
   detail = 'https://edoc.etrade.com/e/t/onlinedocs/docsearch?doc_type=stmt'
-  response = make_org_entry 'etrade statement available :etrade:', '@quicken', '#C',
+  response = make_org_entry 'etrade statement available', 'etrade:@quicken', '#C',
                             "<#{Time.now.strftime('%F %a')}>",
                             detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   if (response.code == '200')
