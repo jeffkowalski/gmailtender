@@ -369,7 +369,7 @@ def dispatch_message message, headers
         headers['From'] == 'Customer Service <customerservice@peets.com>'
     process_peets_reload message, headers
   elsif headers['Subject'] == 'Your bill is ready' &&
-        headers['From'] == 'Comcast Online Communications <online.communications@alerts.comcast.net>'
+        headers['From'] == 'XFINITY My Account <online.communications@alerts.comcast.net>'
     process_comcast_bill message, headers
   elsif headers['Subject'].index(/Important Notice: Your .* Statement/) &&
         headers['From'] == 'American Express <AmericanExpress@welcome.aexp.com>'
