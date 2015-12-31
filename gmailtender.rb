@@ -54,6 +54,7 @@ end
 
 
 def make_org_entry heading, context, priority, date, body
+  heading.downcase!
   $logger.debug "TODO [#{priority}] #{heading} #{context}"
   $logger.debug "SCHEDULED: #{date}"
   $logger.debug "#{body}"
@@ -260,7 +261,7 @@ def process_amazon_order message, headers
   message_json = JSON.parse(results.data.to_json())
   mime_data = message_json['payload']['parts'][0]['parts'][0]['body']['data']
   body = Base64.urlsafe_decode64 mime_data
-  order = headers['Subject'][/Your Amazon.com order of (.*)\./, 1].downcase
+  order = headers['Subject'][/Your Amazon.com order of (.*)\./, 1]
   url = body[/View or manage your orders in Your Orders:\r\n?(https:.*?)\r\n/m, 1]
   delivery = body[/\s*Guaranteed delivery date:\r\n\s*(.*?)\r\n/m, 1]
   if delivery.nil?
