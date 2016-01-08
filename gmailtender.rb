@@ -342,6 +342,28 @@ def process_etrade_statement message, headers
 end
 
 
+def process_workday_feedback_request message, headers
+  $logger.info "(#{__method__})"
+  #Mark Davis (110932) has requested that you provide feedback on Anthony Ruto
+  results = Client.execute!(
+    :api_method => Gmail_api.users.messages.get,
+    :parameters => { :userId => 'me', :id => message.id})
+  message_json = JSON.parse(results.data.to_json())
+  mime_data = message_json['payload']['parts'][0]['parts'][0]['body']['data']
+  body = Base64.urlsafe_decode64 mime_data
+  requester, employee = body.match(/<span>([^<].*?) \(\d+\) has requested that you provide feedback on (.*?) - Please visit your Workday inbox/).captures
+  detail = body[/<a href="(https:\/\/.*?)">Click Here to view the notification details/, 1]
+  response = make_org_entry "provide feedback on #{employee} to #{requester}", '@work', '#C',
+                            "<#{Time.now.strftime('%F %a')}>",
+                            detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  if (response.code == '200')
+    archive message
+  else
+    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+  end
+end
+
+
 def dispatch_message message, headers
   $logger.info headers['Subject']
   $logger.info headers['From']
@@ -390,6 +412,9 @@ def dispatch_message message, headers
   elsif headers['Subject'] == 'You have a new account statement from E*TRADE Securities' &&
         headers['From'] == '"E*TRADE SECURITIES LLC" <etrade_stmt_mbox@statement.etradefinancial.com>'
     process_etrade_statement message, headers
+  elsif headers['Subject'] == 'Feedback is requested' &&
+        headers['From'] == 'AutoNotification workday <autodesk@myworkday.com>'
+    process_workday_feedback_request message, headers
   end
 end
 
