@@ -68,12 +68,19 @@ def make_org_entry heading, context, priority, date, body
 end
 
 
-def archive message
+def archive message, label_name='INBOX'
   $logger.info "archiving #{message.id}"
+
+  results = Client.execute!(
+    :api_method => Gmail_api.users.labels.list,
+    :parameters => { :userId => 'me' })
+
+  label_id = results.data.labels.select {|label| label.name==label_name }.first.id
+
   Client.execute!(
     :api_method => Gmail_api.users.messages.modify,
     :parameters => { 'userId' => 'me', 'id' => message.id },
-    :body_object => { 'removeLabelIds' => ['INBOX'] })
+    :body_object => { 'removeLabelIds' => [label_id] })
 end
 
 
@@ -419,6 +426,21 @@ def dispatch_message message, headers
 end
 
 
+def refile_message context, message, headers
+  $logger.info headers['Subject']
+  $logger.info headers['From']
+
+  response = make_org_entry headers['Subject'], context, '#C',
+                            "<#{Time.now.strftime('%F %a')}>",
+                            "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  if (response.code == '200')
+    archive message, context
+  else
+    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+  end
+end
+
+
 def redirect_output
   unless LOGFILE == 'STDOUT'
     logfile = File.expand_path(LOGFILE)
@@ -444,12 +466,12 @@ Client = Google::APIClient.new(:application_name => APPLICATION_NAME)
 Client.authorization = authorize
 Gmail_api = Client.discovered_api('gmail', 'v1')
 
-# get the user's messages
+# scan unread inbox messages
 results = Client.execute!(
   :api_method => Gmail_api.users.messages.list,
   :parameters => { :userId => 'me', :q => "in:inbox is:unread" })
 
-$logger.info "#{results.data.messages.length} messages found"
+$logger.info "#{results.data.messages.length} unread messages found in inbox"
 
 results.data.messages.each { |message|
   # See https://developers.google.com/gmail/api/v1/reference/users/messages/get
@@ -467,5 +489,31 @@ results.data.messages.each { |message|
 
   dispatch_message message, headers
 }
+
+# scan context folders
+['@work'].each do |context|
+  results = Client.execute!(
+    :api_method => Gmail_api.users.messages.list,
+    :parameters => { :userId => 'me', :q => "in:#{context}" })
+
+  $logger.info "#{results.data.messages.length} messages found in #{context}"
+
+  results.data.messages.each { |message|
+    # See https://developers.google.com/gmail/api/v1/reference/users/messages/get
+    content = Client.execute!(
+      :api_method => Gmail_api.users.messages.get,
+      :parameters => { :userId => 'me', :id => message.id})
+    $logger.debug "- #{message.id}"
+
+    # See https://developers.google.com/gmail/api/v1/reference/users/messages#methods
+    headers = {}
+    content.data.payload.headers.each { |header|
+      $logger.debug header.name
+      headers[header.name] = header.value
+    }
+
+    refile_message context, message, headers
+  }
+end
 
 $logger.info 'done'
