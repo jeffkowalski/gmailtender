@@ -491,7 +491,7 @@ results.data.messages.each { |message|
 }
 
 # scan context folders
-['@work'].each do |context|
+['@agendas', '@calls', '@errands', '@home', '@quicken', '@view', '@waiting', '@work'].each do |context|
   results = Client.execute!(
     :api_method => Gmail_api.users.messages.list,
     :parameters => { :userId => 'me', :q => "in:#{context}" })
