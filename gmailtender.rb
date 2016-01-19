@@ -113,7 +113,7 @@ def process_transfer message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -129,7 +129,7 @@ def process_capitalone_statement message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -143,7 +143,7 @@ def process_pershing_statement message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -158,7 +158,7 @@ def process_paypal_statement message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -172,7 +172,7 @@ def process_pge_statement message, headers
     if (response.code == '200')
       archive message
     else
-      $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+      $logger.error("make_org_entry gave response #{response.code} #{response.message}")
     end
 end
 
@@ -186,7 +186,7 @@ def process_chase_mortgage_statement message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -200,7 +200,7 @@ def process_chase_credic_card_statement message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -213,7 +213,7 @@ def process_peets_reload message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -227,7 +227,7 @@ def process_comcast_bill message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -241,7 +241,7 @@ def process_american_express_statement message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -255,7 +255,7 @@ def process_verizon_bill message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -293,7 +293,7 @@ def process_amazon_order message, headers
       return
     end
   end
-  $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+  $logger.error("make_org_entry gave response #{response.code} #{response.message}")
 end
 
 
@@ -316,7 +316,7 @@ def process_amazon_video_order message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -330,7 +330,7 @@ def process_amazon_subscribe_and_save message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -344,7 +344,7 @@ def process_etrade_statement message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -366,7 +366,7 @@ def process_workday_feedback_request message, headers
   if (response.code == '200')
     archive message
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
@@ -436,7 +436,7 @@ def refile_message context, message, headers
   if (response.code == '200')
     archive message, context
   else
-    $logger.error("make_org_entry gave response @{response.code} @{response.message}")
+    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
   end
 end
 
