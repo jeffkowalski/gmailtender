@@ -1,3 +1,5 @@
+gmailtender - Read GMail messages and dispatch some to org-capture
+
 From [[https://developers.google.com/gmail/api/quickstart/ruby][Ruby Quickstart | Gmail API | Google Developers]]
 
 * Step 1: Enable the Gmail API
