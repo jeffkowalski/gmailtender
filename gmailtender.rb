@@ -104,7 +104,7 @@ class MessageHandler
     $logger.info headers['Subject']
     $logger.info headers['From']
     MessageHandler.descendants.each do |handler|
-      puts handler
+      $logger.debug "matching #{handler}"
       if handler.match headers
         handler.new(:gmail => gmail).process message, headers
         break
@@ -121,7 +121,7 @@ class MessageHandler
     if (response.code == '200')
       archive message
     else
-      $logger.error("make_org_entry gave response #{response.code} #{response.message}")
+      $logger.error "make_org_entry gave response #{response.code} #{response.message}"
     end
   end
 
