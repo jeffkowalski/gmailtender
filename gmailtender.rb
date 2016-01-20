@@ -15,6 +15,7 @@ require 'logger'
 require "net/http"
 require "uri"
 require 'base64'
+require 'thor'
 
 LOGFILE = File.join(Dir.home, '.gmailtender.log')
 
@@ -30,22 +31,16 @@ SCOPE = Google::Apis::GmailV1::AUTH_GMAIL_MODIFY
 # the user's default browser will be launched to approve the request.
 #
 # @return [Google::Auth::UserRefreshCredentials] OAuth2 credentials
-def authorize
+def authorize interactive
   FileUtils.mkdir_p(File.dirname(CREDENTIALS_PATH))
-
   client_id = Google::Auth::ClientId.from_file(CLIENT_SECRETS_PATH)
   token_store = Google::Auth::Stores::FileTokenStore.new(file: CREDENTIALS_PATH)
-  authorizer = Google::Auth::UserAuthorizer.new(
-    client_id, SCOPE, token_store)
+  authorizer = Google::Auth::UserAuthorizer.new(client_id, SCOPE, token_store)
   user_id = 'default'
   credentials = authorizer.get_credentials(user_id)
-  if credentials.nil?
-    url = authorizer.get_authorization_url(
-      base_url: OOB_URI)
-    puts "Open the following URL in the browser and enter the " +
-         "resulting code after authorization"
-    puts url
-    code = gets
+  if credentials.nil? and interactive
+    url = authorizer.get_authorization_url(base_url: OOB_URI)
+    code = ask("Open the following URL in the browser and enter the resulting code after authorization\n" + url)
     credentials = authorizer.get_and_store_credentials_from_code(
       user_id: user_id, code: code, base_url: OOB_URI)
   end
@@ -434,83 +429,97 @@ class MH_WorkdayFeedbackRequest < MessageHandler
 end
 
 
-def redirect_output
-  unless LOGFILE == 'STDOUT'
-    logfile = File.expand_path(LOGFILE)
-    FileUtils.mkdir_p(File.dirname(logfile), :mode => 0755)
-    FileUtils.touch logfile
-    File.chmod 0644, logfile
-    $stdout.reopen logfile, 'a'
-  end
-  $stderr.reopen $stdout
-  $stdout.sync = $stderr.sync = true
-end
+class GMailTender < Thor
+  no_commands {
+    def redirect_output
+      unless LOGFILE == 'STDOUT'
+        logfile = File.expand_path(LOGFILE)
+        FileUtils.mkdir_p(File.dirname(logfile), :mode => 0755)
+        FileUtils.touch logfile
+        File.chmod 0644, logfile
+        $stdout.reopen logfile, 'a'
+      end
+      $stderr.reopen $stdout
+      $stdout.sync = $stderr.sync = true
+    end
 
+    def setup_logger
+      redirect_output if options[:log]
 
-# setup logger
-$logger = Logger.new STDOUT
-$logger.level = $DEBUG ? Logger::DEBUG : Logger::INFO
-$logger.info 'starting'
-
-pre_authorization = authorize
-
-redirect_output unless $DEBUG
-
-
-#
-# initialize the API
-#
-service = Google::Apis::GmailV1::GmailService.new
-service.client_options.application_name = APPLICATION_NAME
-service.authorization = pre_authorization
-gmail = service
-
-
-#
-# scan unread inbox messages
-#
-results = gmail.list_user_messages 'me', q:'in:inbox is:unread'
-
-$logger.info "#{results.messages.nil? ? 'no' : results.messages.length} unread messages found in inbox"
-
-results.messages.andand.each { |message|
-  # See https://developers.google.com/gmail/api/v1/reference/users/messages/get
-  content = gmail.get_user_message 'me', message.id
-  $logger.debug "- #{message.id}"
-
-  # See https://developers.google.com/gmail/api/v1/reference/users/messages#methods
-  headers = {}
-  content.payload.headers.each { |header|
-    $logger.debug "#{header.name} => #{header.value}"
-    headers[header.name] = header.value
+      $logger = Logger.new STDOUT
+      $logger.level = options[:verbose] ? Logger::DEBUG : Logger::INFO
+      $logger.info 'starting'
+    end
   }
 
-  MessageHandler.dispatch gmail, message, headers
-}
+  class_option :log,     :type => :boolean, :default => true, :desc => "log output to ~/.gmailtender.log"
+  class_option :verbose, :type => :boolean, :aliases => "-v", :desc => "increase verbosity"
 
+  desc "auth", "Authorize the application with google services"
+  def auth
+    setup_logger
+    #
+    # initialize the API
+    #
+    service = Google::Apis::GmailV1::GmailService.new
+    service.client_options.application_name = APPLICATION_NAME
+    service.authorization = authorize !options[:log]
+    @gmail = service
+  end
 
-#
-# scan context folders
-#
-['@agendas', '@calls', '@errands', '@home', '@quicken', '@view', '@waiting', '@work'].each do |context|
-  results = gmail.list_user_messages 'me', :q => "in:#{context}"
+  desc "scan", "Scan emails"
+  def scan
+    auth
 
-  $logger.info "#{results.messages.nil? ? 'no' : results.messages.length} unread messages found in #{context}"
+    #
+    # scan unread inbox messages
+    #
+    results = @gmail.list_user_messages 'me', q:'in:inbox is:unread'
 
-  results.messages.andand.each { |message|
-    # See https://developers.google.com/gmail/api/v1/reference/users/messages/get
-    content = gmail.get_user_message 'me', message.id
-    $logger.debug "- #{message.id}"
+    $logger.info "#{results.messages.nil? ? 'no' : results.messages.length} unread messages found in inbox"
 
-    # See https://developers.google.com/gmail/api/v1/reference/users/messages#methods
-    headers = {}
-    content.payload.headers.each { |header|
-      $logger.debug "#{header.name} => #{header.value}"
-      headers[header.name] = header.value
+    results.messages.andand.each { |message|
+      # See https://developers.google.com/gmail/api/v1/reference/users/messages/get
+      content = @gmail.get_user_message 'me', message.id
+      $logger.debug "- #{message.id}"
+
+      # See https://developers.google.com/gmail/api/v1/reference/users/messages#methods
+      headers = {}
+      content.payload.headers.each { |header|
+        $logger.debug "#{header.name} => #{header.value}"
+        headers[header.name] = header.value
+      }
+
+      MessageHandler.dispatch @gmail, message, headers
     }
 
-    MessageHandler.refile context, message, headers
-  }
+
+    #
+    # scan context folders
+    #
+    ['@agendas', '@calls', '@errands', '@home', '@quicken', '@view', '@waiting', '@work'].each do |context|
+      results = @gmail.list_user_messages 'me', :q => "in:#{context}"
+
+      $logger.info "#{results.messages.nil? ? 'no' : results.messages.length} unread messages found in #{context}"
+
+      results.messages.andand.each { |message|
+        # See https://developers.google.com/gmail/api/v1/reference/users/messages/get
+        content = @gmail.get_user_message 'me', message.id
+        $logger.debug "- #{message.id}"
+
+        # See https://developers.google.com/gmail/api/v1/reference/users/messages#methods
+        headers = {}
+        content.payload.headers.each { |header|
+          $logger.debug "#{header.name} => #{header.value}"
+          headers[header.name] = header.value
+        }
+
+        MessageHandler.refile context, message, headers
+      }
+    end
+
+    $logger.info 'done'
+  end
 end
 
-$logger.info 'done'
+GMailTender.start
