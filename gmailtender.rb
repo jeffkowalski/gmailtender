@@ -103,14 +103,6 @@ class MessageHandler
   end
 
 
-  def get_body message
-    results = gmail.get_user_message :user_id => 'me', :id => message.id
-    message_json = JSON.parse(results.to_json())
-    mime_data = Base64.urlsafe_decode64(message_json['payload']['body']['data'])
-    return mime_data
-  end
-
-
   def self.dispatch gmail, message, headers
     $logger.info headers['Subject']
     $logger.info headers['From']
@@ -196,7 +188,7 @@ class MH_CapitalOneTransfer < MessageHandler
   end
 
   def handle message, headers
-    content_raw = gmail.get_user_message :user_id => 'me', :id => message.id, :format => 'raw'
+    content_raw = gmail.get_user_message 'me', message.id, :format => 'raw'
     # e.g:
     #  Amount: $39.99
     #  From: Orange Parker Allowance, XXXXXX1099
@@ -234,7 +226,8 @@ class MH_PaypalStatement < MessageHandler
   end
 
   def handle message, headers
-    body = get_body message
+    results = gmail.get_user_message 'me', message.id
+    body = results.payload.body.data
     detail = '' + body[/<a.*?href="(.*?)".*?View Statement<\/a>/m, 1] + "\n"
     return make_org_entry 'account statement available', 'paypal:@quicken', '#C',
                           "<#{Time.now.strftime('%F %a')}>",
@@ -368,10 +361,9 @@ class MH_AmazonOrder < MessageHandler
 
   def process message, headers  # note overrides process, not handle
     $logger.info "(#{__method__})"
-    results = gmail.get_user_message :user_id => 'me', :id => message.id
-    message_json = JSON.parse(results.to_json())
-    mime_data = message_json['payload']['parts'][0]['parts'][0]['body']['data']
-    body = Base64.urlsafe_decode64 mime_data
+    results = gmail.get_user_message 'me', message.id
+
+    body = results.payload.parts[0].parts[0].body.data;
     order = headers['Subject'][/Your Amazon.com order of (.*)\./, 1]
     url = body[/View or manage your orders in Your Orders:\r\n?(https:.*?)\r\n/m, 1]
     delivery = body[/\s*Guaranteed delivery date:\r\n\s*(.*?)\r\n/m, 1]
@@ -381,7 +373,7 @@ class MH_AmazonOrder < MessageHandler
     delivery = delivery.nil? ? Time.now : Date.parse(delivery)
     delivery = delivery.strftime('%F %a')
     total = body[/Order Total: (\$.*)\r\n/, 1]
-    #$logger.info "#{order} #{url} #{delivery} #{total}"
+    $logger.info "#{order} #{url} #{delivery} #{total}"
 
     detail = "#{url}\n#{total}"
     response = make_org_entry "order of #{order}", 'amazon:@quicken', '#C',
@@ -409,13 +401,11 @@ class MH_AmazonVideoOrder < MessageHandler
   end
 
   def handle message, headers
-    results = gmail.get_user_message :user_id => 'me', :id => message.id
-    message_json = JSON.parse(results.to_json())
-    mime_data = message_json['payload']['parts'][0]['parts'][0]['body']['data']
-    body = Base64.urlsafe_decode64 mime_data
+    results = gmail.get_user_message 'me', message.id
+    body = results.payload.parts[0].parts[0].body.data;
     order = headers['Subject'][/Amazon.com order of (.*)\./, 1]
     total = body[/Grand Total:\s+(\$.*)\r\n/, 1]
-    #$logger.info "#{order} #{total}"
+    $logger.info "#{order} #{total}"
 
     detail = "#{total}"
     return make_org_entry "order of #{order}", 'amazon:@quicken', '#C',
@@ -433,10 +423,8 @@ class MH_WorkdayFeedbackRequest < MessageHandler
 
   def handle message, headers
     #Mark Davis (110932) has requested that you provide feedback on Anthony Ruto
-    results = gmail.get_user_message :user_id => 'me', :id => message.id
-    message_json = JSON.parse(results.to_json())
-    mime_data = message_json['payload']['parts'][0]['parts'][0]['body']['data']
-    body = Base64.urlsafe_decode64 mime_data
+    results = gmail.get_user_message 'me', message.id
+    body = results.payload.parts[0].parts[0].body.data;
     requester, employee = body.match(/<span>([^<].*?) \(\d+\) has requested that you provide feedback on (.*?) - Please visit your Workday inbox/).captures
     detail = body[/<a href="(https:\/\/.*?)">Click Here to view the notification details/, 1]
     return make_org_entry "provide feedback on #{employee} to #{requester}", '@work', '#C',
