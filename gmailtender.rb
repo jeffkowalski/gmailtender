@@ -84,10 +84,10 @@ class MessageHandler
   def archive message, label_name='INBOX'
     $logger.info "archiving #{message.id}"
 
-    results = gmail.list_user_labels 'me'
-    label_id = results.labels.select {|label| label.name==label_name }.first.id
+    labels = (gmail.list_user_labels 'me').labels
+    label_id = labels.select {|label| label.name==label_name }.first.id
 
-    mmr = Google::Apis::GmailV1::ModifyMessageRequest.new(:remove_label_ids => [label_id])
+    mmr = Google::Apis::GmailV1::ModifyMessageRequest.new(remove_label_ids: [label_id])
     gmail.modify_message 'me', message.id, mmr
   end
 
@@ -95,10 +95,10 @@ class MessageHandler
   def unlabel_thread thread, label_name
     $logger.info "archiving #{thread.id}"
 
-    results = gmail.list_user_labels 'me'
-    label_id = results.labels.select {|label| label.name==label_name }.first.id
+    labels = (gmail.list_user_labels 'me').labels
+    label_id = labels.select {|label| label.name==label_name }.first.id
 
-    mmr = Google::Apis::GmailV1::ModifyThreadRequest.new(:remove_label_ids => [label_id])
+    mmr = Google::Apis::GmailV1::ModifyThreadRequest.new(remove_label_ids: [label_id])
     gmail.modify_thread 'me', thread.id, mmr
   end
 
@@ -188,14 +188,14 @@ class MH_CapitalOneTransfer < MessageHandler
   end
 
   def handle message, headers
-    content_raw = gmail.get_user_message 'me', message.id, :format => 'raw'
+    raw = (gmail.get_user_message 'me', message.id, format: 'raw').raw
     # e.g:
     #  Amount: $39.99
     #  From: Orange Parker Allowance, XXXXXX1099
     #  To: Orange Checking, XXXXXX6515
     #  Memo: game
     #  Transferred On: 08/22/2015
-    detail = content_raw.raw[/(Amount:.*?Transferred On:.*?\n)/m, 1]
+    detail = raw[/(Amount:.*?Transferred On:.*?\n)/m, 1]
     detail.gsub!("\015", '')
     return make_org_entry 'capital one transfer money notice', 'capitalone:@quicken', '#C',
                           "<#{Time.now.strftime('%F %a')}>",
@@ -226,8 +226,8 @@ class MH_PaypalStatement < MessageHandler
   end
 
   def handle message, headers
-    results = gmail.get_user_message 'me', message.id
-    body = results.payload.body.data
+    payload = (gmail.get_user_message 'me', message.id).payload
+    body = payload.body.data
     detail = '' + body[/<a.*?href="(.*?)".*?View Statement<\/a>/m, 1] + "\n"
     return make_org_entry 'account statement available', 'paypal:@quicken', '#C',
                           "<#{Time.now.strftime('%F %a')}>",
@@ -361,9 +361,9 @@ class MH_AmazonOrder < MessageHandler
 
   def process message, headers  # note overrides process, not handle
     $logger.info "(#{__method__})"
-    results = gmail.get_user_message 'me', message.id
+    payload = (gmail.get_user_message 'me', message.id).payload
 
-    body = results.payload.parts[0].parts[0].body.data;
+    body = payload.parts[0].parts[0].body.data;
     order = headers['Subject'][/Your Amazon.com order of (.*)\./, 1]
     url = body[/View or manage your orders in Your Orders:\r\n?(https:.*?)\r\n/m, 1]
     delivery = body[/\s*Guaranteed delivery date:\r\n\s*(.*?)\r\n/m, 1]
@@ -401,8 +401,8 @@ class MH_AmazonVideoOrder < MessageHandler
   end
 
   def handle message, headers
-    results = gmail.get_user_message 'me', message.id
-    body = results.payload.parts[0].parts[0].body.data;
+    payload = (gmail.get_user_message 'me', message.id).payload
+    body = payload.parts[0].parts[0].body.data;
     order = headers['Subject'][/Amazon.com order of (.*)\./, 1]
     total = body[/Grand Total:\s+(\$.*)\r\n/, 1]
     $logger.info "#{order} #{total}"
@@ -438,8 +438,8 @@ class MH_WorkdayFeedbackRequest < MessageHandler
 
   def handle message, headers
     #Mark Davis (110932) has requested that you provide feedback on Anthony Ruto
-    results = gmail.get_user_message 'me', message.id
-    body = results.payload.parts[0].parts[0].body.data;
+    payload = (gmail.get_user_message 'me', message.id).payload
+    body = payload.parts[0].parts[0].body.data;
     requester, employee = body.match(/<span>([^<].*?) \(\d+\) has requested that you provide feedback on (.*?) - Please visit your Workday inbox/).captures
     detail = body[/<a href="(https:\/\/.*?)">Click Here to view the notification details/, 1]
     return make_org_entry "provide feedback on #{employee} to #{requester}", '@work', '#C',
@@ -494,16 +494,16 @@ class GMailTender < Thor
     #
     # scan unread inbox messages
     #
-    results = @gmail.list_user_messages 'me', q:'in:inbox is:unread'
+    messages = (@gmail.list_user_messages 'me', q: 'in:inbox is:unread').messages
 
-    $logger.info "#{results.messages.nil? ? 'no' : results.messages.length} unread messages found in inbox"
+    $logger.info "#{messages.nil? ? 'no' : messages.length} unread messages found in inbox"
 
-    results.messages.andand.each do |message|
-      content = @gmail.get_user_message 'me', message.id
+    messages.andand.each do |message|
       $logger.debug "- #{message.id}"
 
       headers = {}
-      content.payload.headers.each do |header|
+      content = (@gmail.get_user_message 'me', message.id).payload
+      content.headers.each do |header|
         $logger.debug "#{header.name} => #{header.value}"
         headers[header.name] = header.value
       end
@@ -516,20 +516,19 @@ class GMailTender < Thor
     # scan context folders
     #
     ['@agendas', '@calls', '@errands', '@home', '@quicken', '@view', '@waiting', '@work'].each do |context|
-      results = @gmail.list_user_threads 'me', :q => "in:#{context}"
+      threads = (@gmail.list_user_threads 'me', q: "in:#{context}").threads
 
-      $logger.info "#{results.threads.nil? ? 'no' : results.threads.length} unread messages found in #{context}"
+      $logger.info "#{threads.nil? ? 'no' : threads.length} unread messages found in #{context}"
 
-      results.threads.andand.each do |thread|
+      threads.andand.each do |thread|
         # find most recent message in thread list
-        result = @gmail.get_user_thread 'me', thread.id, :fields => "messages(id,internalDate)"
-        message = results.messages.sort_by(&:internal_date).last
-
-        content = @gmail.get_user_message 'me', message.id
+        messages = (@gmail.get_user_thread 'me', thread.id, fields: "messages(id,internalDate)").messages
+        message = messages.sort_by(&:internal_date).last
         $logger.debug "- #{message.id}"
 
         headers = {}
-        content.payload.headers.each do |header|
+        content = (@gmail.get_user_message 'me', message.id).payload
+        content.headers.each do |header|
           $logger.debug "#{header.name} => #{header.value}"
           headers[header.name] = header.value
         end
