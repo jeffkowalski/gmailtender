@@ -92,6 +92,17 @@ class MessageHandler
   end
 
 
+  def unlabel_thread thread, label_name
+    $logger.info "archiving #{thread.id}"
+
+    results = gmail.list_user_labels 'me'
+    label_id = results.labels.select {|label| label.name==label_name }.first.id
+
+    mmr = Google::Apis::GmailV1::ModifyThreadRequest.new(:remove_label_ids => [label_id])
+    gmail.modify_thread 'me', thread.id, mmr
+  end
+
+
   def get_body message
     results = gmail.get_user_message :user_id => 'me', :id => message.id
     message_json = JSON.parse(results.to_json())
@@ -126,15 +137,21 @@ class MessageHandler
   end
 
 
-  def refile context, message, headers
+  def self.refile gmail, context, thread, message, headers
     $logger.info headers['Subject']
     $logger.info headers['From']
 
-    response = make_org_entry headers['Subject'], context, '#C',
-                              "<#{Time.now.strftime('%F %a')}>",
-                              "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+    full_context = context
+    if context == '@waiting'
+      full_context = headers['To'][/<(.*?)@.*?>/, 1].downcase.gsub(/\./, '_') + ':' + context
+    end
+
+    handler = MessageHandler.new(:gmail => gmail)
+    response = handler.make_org_entry headers['Subject'], full_context, '#C',
+                                      "<#{Time.now.strftime('%F %a')}>",
+                                      "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
     if (response.code == '200')
-      archive message, context
+      handler.unlabel_thread thread, context
     else
       $logger.error("make_org_entry gave response #{response.code} #{response.message}")
     end
@@ -478,44 +495,44 @@ class GMailTender < Thor
 
     $logger.info "#{results.messages.nil? ? 'no' : results.messages.length} unread messages found in inbox"
 
-    results.messages.andand.each { |message|
-      # See https://developers.google.com/gmail/api/v1/reference/users/messages/get
+    results.messages.andand.each do |message|
       content = @gmail.get_user_message 'me', message.id
       $logger.debug "- #{message.id}"
 
-      # See https://developers.google.com/gmail/api/v1/reference/users/messages#methods
       headers = {}
-      content.payload.headers.each { |header|
+      content.payload.headers.each do |header|
         $logger.debug "#{header.name} => #{header.value}"
         headers[header.name] = header.value
-      }
+      end
 
       MessageHandler.dispatch @gmail, message, headers
-    }
+    end
 
 
     #
     # scan context folders
     #
     ['@agendas', '@calls', '@errands', '@home', '@quicken', '@view', '@waiting', '@work'].each do |context|
-      results = @gmail.list_user_messages 'me', :q => "in:#{context}"
+      results = @gmail.list_user_threads 'me', :q => "in:#{context}"
 
-      $logger.info "#{results.messages.nil? ? 'no' : results.messages.length} unread messages found in #{context}"
+      $logger.info "#{results.threads.nil? ? 'no' : results.threads.length} unread messages found in #{context}"
 
-      results.messages.andand.each { |message|
-        # See https://developers.google.com/gmail/api/v1/reference/users/messages/get
+      results.threads.andand.each do |thread|
+        # find most recent message in thread list
+        result = @gmail.get_user_thread 'me', thread.id, :fields => "messages(id,internalDate)"
+        message = results.messages.sort_by(&:internal_date).last
+
         content = @gmail.get_user_message 'me', message.id
         $logger.debug "- #{message.id}"
 
-        # See https://developers.google.com/gmail/api/v1/reference/users/messages#methods
         headers = {}
-        content.payload.headers.each { |header|
+        content.payload.headers.each do |header|
           $logger.debug "#{header.name} => #{header.value}"
           headers[header.name] = header.value
-        }
+        end
 
-        MessageHandler.refile context, message, headers
-      }
+        MessageHandler.refile @gmail, context, thread, message, headers
+      end
     end
 
     $logger.info 'done'
