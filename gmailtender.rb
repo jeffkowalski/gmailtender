@@ -151,6 +151,31 @@ class MessageHandler
 end
 
 
+class MH_AllstateBill < MessageHandler
+  def self.match headers
+    headers['Subject'] == 'Allstate: Your billing document is ready to view online' &&
+      headers['From'] == 'Allstate My Account <allstate@trns01.allstate-email.com>'
+  end
+
+  def handle message, headers
+    raw = (gmail.get_user_message 'me', message.id, format: 'raw').raw
+    # Policy Number: XXXX63191
+    # Policy Type: Auto - private passenger voluntary
+    # Document Title: Auto policy schedule for the Recurring Credit Card Pay Plan
+    # Due Date: Payments scheduled for the 16th
+    # Minimum Amount Due: See Schedule
+    detail = raw[/(Policy Number:.*?Minimum Amount Due:.*?\n)/m, 1]
+    detail.gsub!("\015", '')
+    puts detail
+    return make_org_entry 'allstate bill available', '@quicken', '#C',
+                          "<#{Time.now.strftime('%F %a')}>",
+                          detail +
+                          "https://myaccount.allstate.com/anon/login/login.aspx\n" +
+                          "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
+
 class MH_ChaseCreditCardStatement < MessageHandler
   def self.match headers
     headers['Subject'] == 'Your credit card statement is available online' &&
