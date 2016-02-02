@@ -518,7 +518,7 @@ class GMailTender < Thor
     ['@agendas', '@calls', '@errands', '@home', '@quicken', '@view', '@waiting', '@work'].each do |context|
       threads = (@gmail.list_user_threads 'me', q: "in:#{context}").threads
 
-      $logger.info "#{threads.nil? ? 'no' : threads.length} unread messages found in #{context}"
+      $logger.info "#{threads.nil? ? 'no' : threads.length} messages found in #{context}"
 
       threads.andand.each do |thread|
         # find most recent message in thread list
