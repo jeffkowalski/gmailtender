@@ -209,7 +209,7 @@ end
 class MH_CapitalOneTransfer < MessageHandler
   def self.match headers
     headers['Subject'] == "Transfer Money Notice" &&
-      headers['From'].include?("capitalone360.com")
+      headers['From'].include?("capitalone.com")
   end
 
   def handle message, headers
@@ -232,13 +232,13 @@ end
 class MH_CapitalOneStatement < MessageHandler
   def self.match headers
     headers['Subject'].include?("eStatement's now available") &&
-      headers['From'].include?("capitalone360.com")
+      headers['From'] == "Capital One <capitalone@email.capitalone.com>"
   end
 
   def handle message, headers
     return make_org_entry 'account statement available', 'capitalone:@quicken', '#C',
                           "<#{Time.now.strftime('%F %a')}>",
-                          "https://secure.capitalone360.com/myaccount/banking/login.vm#\n" +
+                          "https://secure.capitalone360.com/myaccount/banking/login.vm\n" +
                           "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
