@@ -384,19 +384,13 @@ class MH_AmazonOrder < MessageHandler
       headers['From'] == '"auto-confirm@amazon.com" <auto-confirm@amazon.com>'
   end
 
-  def process message, headers  # note overrides process, not handle
-    $logger.info "(#{__method__})"
+  def handle message, headers
     payload = (gmail.get_user_message 'me', message.id).payload
-
-    body = payload.parts[0].parts[0].body.data;
+    body = payload.parts[0].body.data;
     order = headers['Subject'][/Your Amazon.com order of (.*)\./, 1]
     url = body[/View or manage your orders in Your Orders:\r\n?(https:.*?)\r\n/m, 1]
-    delivery = body[/\s*Guaranteed delivery date:\r\n\s*(.*?)\r\n/m, 1]
-    if delivery.nil?
-      delivery = body[/\s*Estimated delivery date:\r\n\s*(.*?)-?\r\n/m, 1]
-    end
-    delivery = delivery.nil? ? Time.now : Date.parse(delivery)
-    delivery = delivery.strftime('%F %a')
+    delivery = body[/\s*(:?(:?(:?Guaranteed|Estimated) delivery date)|(:?Arriving)):\r\n\s*(.*?)\r\n/m, 2]
+    delivery = (delivery.nil? ? Time.now : Date.parse(delivery)).strftime('%F %a')
     total = body[/Order Total: (\$.*)\r\n/, 1]
     $logger.info "#{order} #{url} #{delivery} #{total}"
 
@@ -409,33 +403,29 @@ class MH_AmazonOrder < MessageHandler
       response = make_org_entry "delivery of #{order}", 'amazon:@waiting', '#C',
                                 "<#{delivery}>",
                                 detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-      if (response.code == '200')
-        archive message
-        return
-      end
     end
-    $logger.error("make_org_entry gave response #{response.code} #{response.message}")
-  end
-end
-
-
-class MH_AmazonVideoOrder < MessageHandler
-  def self.match headers
-    headers['Subject'].include?('Amazon.com order of') &&
-      headers['From'] == '"Amazon.com" <digital-no-reply@amazon.com>'
+    return response
   end
 
-  def handle message, headers
-    payload = (gmail.get_user_message 'me', message.id).payload
-    body = payload.parts[0].parts[0].body.data;
-    order = headers['Subject'][/Amazon.com order of (.*)\./, 1]
-    total = body[/Grand Total:\s+(\$.*)\r\n/, 1]
-    $logger.info "#{order} #{total}"
 
-    detail = "#{total}"
-    return make_org_entry "order of #{order}", 'amazon:@quicken', '#C',
-                          "<#{Time.now.strftime('%F %a')}>",
-                          detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  class MH_AmazonVideoOrder < MessageHandler
+    def self.match headers
+      headers['Subject'].include?('Amazon.com order of') &&
+        headers['From'] == '"Amazon.com" <digital-no-reply@amazon.com>'
+    end
+
+    def handle message, headers
+      payload = (gmail.get_user_message 'me', message.id).payload
+      body = payload.parts[0].body.data;
+      order = headers['Subject'][/Amazon.com order of (.*)\./, 1]
+      total = body[/Grand Total:\s+(\$.*)\r\n/, 1]
+      $logger.info "#{order} #{total}"
+
+      detail = "#{total}"
+      return make_org_entry "order of #{order}", 'amazon:@quicken', '#C',
+                            "<#{Time.now.strftime('%F %a')}>",
+                            detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+    end
   end
 end
 
