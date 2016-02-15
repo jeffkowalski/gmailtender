@@ -1,5 +1,5 @@
 source 'https://rubygems.org'
-ruby '2.0.0'
+ruby '2.3.0'
 gem 'google-api-client', '0.9'
 gem 'andand'
 gem 'thor'

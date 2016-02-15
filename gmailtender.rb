@@ -1,4 +1,4 @@
-#!/usr/bin/ruby2.0
+#!/usr/bin/env ruby
 
 # GMail API: https://developers.google.com/gmail/api/quickstart/ruby
 #            https://developers.google.com/gmail/api/v1/reference/
