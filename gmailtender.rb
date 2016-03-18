@@ -350,7 +350,7 @@ end
 
 class MH_VerizonBill < MessageHandler
   def self.match headers
-    headers['Subject'] == 'Your Bill is Now Available' &&
+    headers['Subject'] == 'Your online bill is available.' &&
       headers['From'] == 'Verizon Wireless <VZWMail@ecrmemail.verizonwireless.com>'
   end
 
