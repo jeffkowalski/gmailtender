@@ -129,13 +129,27 @@ class MessageHandler
   end
 
 
+  def self.friendly_name addr
+    name = addr[/"?(.*?)"?\s</, 1] || addr[/<?(.*?)@/, 1]
+    if not name.nil?
+      name.downcase!
+      name.gsub!(/[\. ]/, '_')
+    end
+    return name
+  end
+
+
   def self.refile gmail, context, thread, message, headers
     $logger.info headers['Subject']
     $logger.info headers['From']
 
     full_context = context
     if context == '@waiting'
-      full_context = headers['To'][/<(.*?)@.*?>/, 1].downcase.gsub(/\./, '_') + ':' + context
+      to = friendly_name headers['To']
+      if to == 'jeff_kowalski'
+        to = friendly_name headers['From']
+      end
+      full_context = [to, context].join(':')
     end
 
     handler = MessageHandler.new(:gmail => gmail)
