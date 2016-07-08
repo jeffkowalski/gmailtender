@@ -403,7 +403,7 @@ class MH_AmazonOrder < MessageHandler
     body = payload.parts[0].body.data;
     order = headers['Subject'][/Your Amazon.com order of (.*)\./, 1]
     url = body[/View or manage your orders in Your Orders:\r\n?(https:.*?)\r\n/m, 1]
-    delivery = body[/\s*(:?(:?(:?Guaranteed|Estimated) delivery date)|(:?Arriving)):\r\n\s*(.*?)\r\n/m, 2]
+    delivery = body[/\s*(:?(:?(:?Guaranteed|Estimated) delivery date)|(:?Arriving)):\s*\r\n\s*(.*?)\r\n/m, 2]
     delivery = (delivery.nil? ? Time.now : Date.parse(delivery)).strftime('%F %a')
     total = body[/Order Total: (\$.*)\r\n/, 1]
     $logger.info "#{order} #{url} #{delivery} #{total}"
