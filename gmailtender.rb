@@ -17,6 +17,7 @@ require "uri"
 require 'base64'
 require 'thor'
 
+
 LOGFILE = File.join(Dir.home, '.gmailtender.log')
 
 OOB_URI = 'urn:ietf:wg:oauth:2.0:oob'
@@ -394,47 +395,17 @@ end
 
 class MH_AmazonOrder < MessageHandler
   def self.match headers
-    headers['Subject'].include?('Your Amazon.com order of') &&
+    headers['Subject'].include?('Your Amazon.com order') &&
       headers['From'] == '"auto-confirm@amazon.com" <auto-confirm@amazon.com>'
   end
 
   def handle message, headers
     payload = (gmail.get_user_message 'me', message.id).payload
     body = payload.parts[0].body.data;
-    order = headers['Subject'][/Your Amazon.com order of (.*)\./, 1]
+    order = headers['Subject'][/Your Amazon.com order of (.*)\./, 1] ||
+            body[/You ordered\s+(".*?")\s*\.\r\n/m, 1]
     url = body[/View or manage your orders in Your Orders:\r\n?(https:.*?)\r\n/m, 1]
-    delivery = body[/\s*(:?(:?(:?Guaranteed|Estimated) delivery date)|(:?Arriving)):\s*\r\n\s*(.*?)\r\n/m, 2]
-    delivery = (delivery.nil? ? Time.now : Date.parse(delivery)).strftime('%F %a')
-    total = body[/Order Total: (\$.*)\r\n/, 1]
-    $logger.info "#{order} #{url} #{delivery} #{total}"
-
-    detail = "#{url}\n#{total}"
-    response = make_org_entry "order of #{order}", 'amazon:@quicken', '#C',
-                              "<#{Time.now.strftime('%F %a')}>",
-                              detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-    if (response.code == '200')
-      detail = url
-      response = make_org_entry "delivery of #{order}", 'amazon:@waiting', '#C',
-                                "<#{delivery}>",
-                                detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-    end
-    return response
-  end
-end
-
-
-class MH_AmazonOrderConfirmation < MessageHandler
-  def self.match headers
-    headers['Subject'] == 'Your Amazon.com order' &&
-      headers['From'] == '"auto-confirm@amazon.com" <auto-confirm@amazon.com>'
-  end
-
-  def handle message, headers
-    payload = (gmail.get_user_message 'me', message.id).payload
-    body = payload.parts[0].body.data;
-    order = body[/You ordered\s+(".*?")\s*\.\r\n/m, 1]
-    url = body[/View or manage your orders in Your Orders:\r\n?(https:.*?)\r\n/m, 1]
-    delivery = body[/\s*(:?(:?(:?Guaranteed|Estimated) delivery date)|(:?Arriving)):\r\n\s*(.*?)\r\n/m, 2]
+    delivery = body[/\s*((:?(:?Guaranteed|Estimated) delivery date)|(:?Arriving)):\s*\r\n\s*(?<date>.*?)\r\n/m, :date]
     delivery = (delivery.nil? ? Time.now : Date.parse(delivery)).strftime('%F %a')
     total = body[/Order Total: (\$.*)\r\n/, 1]
     $logger.info "#{order} #{url} #{delivery} #{total}"
