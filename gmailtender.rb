@@ -8,6 +8,7 @@
 require 'googleauth'
 require 'googleauth/stores/file_token_store'
 require 'google/apis/gmail_v1'
+require 'google/apis/calendar_v3'
 
 require 'andand'
 require 'fileutils'
@@ -24,7 +25,7 @@ OOB_URI = 'urn:ietf:wg:oauth:2.0:oob'
 APPLICATION_NAME = 'gmailtender'
 CLIENT_SECRETS_PATH = 'client_secret.json'
 CREDENTIALS_PATH = File.join(Dir.home, '.credentials', "gmailtender.yaml")
-SCOPE = Google::Apis::GmailV1::AUTH_GMAIL_MODIFY
+SCOPE = [Google::Apis::GmailV1::AUTH_GMAIL_MODIFY, 'https://www.googleapis.com/auth/calendar']
 
 ##
 # Ensure valid credentials, either by restoring from the saved credentials
@@ -50,7 +51,7 @@ end
 
 
 class MessageHandler
-  attr_accessor :gmail
+  attr_accessor :gmail, :gcal
 
   def initialize params = {}
     params.each { |key, value| send "#{key}=", value }
@@ -78,7 +79,10 @@ class MessageHandler
     http = Net::HTTP.new(uri.host, uri.port)
     request = Net::HTTP::Get.new("/capture/b/LINK/#{title}/#{body}")
     response = http.request(request)
-    return response
+    if (response.code != '200')
+      $logger.error "make_org_entry gave response #{response.code} #{response.message}"
+    end
+    return response.code == '200'
   end
 
 
@@ -104,13 +108,13 @@ class MessageHandler
   end
 
 
-  def self.dispatch gmail, message, headers
+  def self.dispatch gcal, gmail, message, headers
     $logger.info headers['Subject']
     $logger.info headers['From']
     MessageHandler.descendants.each do |handler|
       $logger.debug "matching #{handler}"
       if handler.match headers
-        handler.new(:gmail => gmail).process message, headers
+        handler.new(:gcal => gcal, :gmail => gmail).process message, headers
         break
       end
     end
@@ -122,10 +126,8 @@ class MessageHandler
 
     response = handle message, headers
 
-    if (response.code == '200')
+    if (response)
       archive message
-    else
-      $logger.error "make_org_entry gave response #{response.code} #{response.message}"
     end
   end
 
@@ -480,6 +482,70 @@ class MH_WorkdayFeedbackRequest < MessageHandler
 end
 
 
+class MH_SelectASpot < MessageHandler
+  def self.match headers
+    headers['Subject'] == 'Select-a-Spot.com: Reservation Successful' &&
+      headers['From'] == 'Select-a-Spot <notifications@select-a-spot.com>'
+  end
+
+  def handle message, headers
+    payload = (gmail.get_user_message 'me', message.id).payload
+    body = payload.parts[0].body.data;
+    #  <strong>Effective Dates:</strong> April 3, 2017 - April 3, 2017<br/>
+    #  <strong>Facility Details:</strong> Orinda Station, 11 Camino Pablo, Orinda, CA 94563, <a href="http://www.bart.gov/sites/default/files/docs/BART_Parking_Orinda.pdf">view facility map</a><br/>
+    #  <strong>Permit Number: </strong>1260089<br/>
+    #  <p>Price: $6.00</p>
+    dates = body.match(/<strong>Effective Dates:<\/strong> (.*) - (.*)<br\/>/).captures
+    facility = body[/<strong>Facility Details:<\/strong> (.*), <a href=".*">view facility map<\/a><br\/>/, 1]
+    station = facility[/(.*?),/, 1].downcase
+    permit = body[/<strong>Permit Number: <\/strong>(.*)<br\/>/, 1]
+    price = body[/<p>Price: \$(.*)<\/p>/, 1]
+    $logger.info "#{dates} #{facility} #{permit} #{price}"
+
+    start_date = Date.parse(dates[0])
+    end_date = Date.parse(dates[0])
+
+    (Date.parse(dates[0])..Date.parse(dates[1])).each do |date|
+
+      old_events = gcal.list_events('primary',
+                                    single_events: true,
+                                    q: 'bart parking',
+                                    time_min: Time.parse(date.to_s + ' 00:00:00 Pacific Time').iso8601,
+                                    time_max: Time.parse(date.to_s + ' 23:59:59 Pacific Time').iso8601,
+                                    fields: 'items(id,summary,location,organizer,attendees,description,start,end),next_page_token')
+      old_events.items.each do |event|
+        $logger.info "deleting #{event.summary} #{event.id}"
+        gcal.delete_event 'primary', event.id
+      end
+
+      new_event = Google::Apis::CalendarV3::Event.new(
+        {
+          summary: "bart parking at #{station}",
+          location: facility,
+          description: "permit #{permit}",
+          start: {
+            date_time: Time.parse(date.to_s + ' 09:30:00 Pacific Time').iso8601,
+            # 2015-05-28T09:00:00-07:00
+            # time_zone: 'America/Los_Angeles'
+          },
+          end: {
+            date_time: Time.parse(date.to_s + ' 10:00:00 Pacific Time').iso8601,
+            # time_zone: 'America/Los_Angeles'
+          }
+        }
+      )
+
+      $logger.info new_event
+
+      # https://developers.google.com/google-apps/calendar/v3/reference/events/insert
+      result = gcal.insert_event 'primary', new_event
+    end
+
+    return true
+  end
+end
+
+
 class GMailTender < Thor
   no_commands {
     def redirect_output
@@ -516,6 +582,11 @@ class GMailTender < Thor
     service.client_options.application_name = APPLICATION_NAME
     service.authorization = authorize !options[:log]
     @gmail = service
+
+    service = Google::Apis::CalendarV3::CalendarService.new
+    service.client_options.application_name = APPLICATION_NAME
+    service.authorization = authorize !options[:log]
+    @gcal = service
   end
 
   desc "scan", "Scan emails"
@@ -539,7 +610,7 @@ class GMailTender < Thor
         headers[header.name] = header.value
       end
 
-      MessageHandler.dispatch @gmail, message, headers
+      MessageHandler.dispatch @gcal, @gmail, message, headers
     end
 
 
