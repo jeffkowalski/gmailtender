@@ -309,7 +309,7 @@ end
 class MH_PeetsReload < MessageHandler
   def self.match headers
     headers['Subject'].include?("Your Peet's Card Reload Order") &&
-      headers['From'] == 'Customer Service <customerservice@peets.com>'
+      headers['From'].include?("<customerservice@peets.com>")
   end
 
   def handle message, headers
