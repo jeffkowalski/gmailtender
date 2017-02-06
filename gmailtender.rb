@@ -159,10 +159,8 @@ class MessageHandler
     response = handler.make_org_entry headers['Subject'], full_context, '#C',
                                       "<#{Time.now.strftime('%F %a')}>",
                                       "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-    if (response.code == '200')
+    if (response)
       handler.unlabel_thread thread, context
-    else
-      $logger.error("make_org_entry gave response #{response.code} #{response.message}")
     end
   end
 end
@@ -416,7 +414,7 @@ class MH_AmazonOrder < MessageHandler
     response = make_org_entry "order of #{order}", 'amazon:@quicken', '#C',
                               "<#{Time.now.strftime('%F %a')}>",
                               detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-    if (response.code == '200')
+    if (response)
       detail = url
       response = make_org_entry "delivery of #{order}", 'amazon:@waiting', '#C',
                                 "<#{delivery}>",
