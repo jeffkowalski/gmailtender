@@ -500,9 +500,6 @@ class MH_SelectASpot < MessageHandler
     price = body[/<p>Price: \$(.*)<\/p>/, 1]
     $logger.info "#{dates} #{facility} #{permit} #{price}"
 
-    start_date = Date.parse(dates[0])
-    end_date = Date.parse(dates[0])
-
     (Date.parse(dates[0])..Date.parse(dates[1])).each do |date|
 
       old_events = gcal.list_events('primary',
@@ -539,7 +536,10 @@ class MH_SelectASpot < MessageHandler
       result = gcal.insert_event 'primary', new_event
     end
 
-    return true
+    return make_org_entry "select-a-spot #{price}", 'amazon_visa:@quicken', '#C',
+                          "<#{Time.now.strftime('%F %a')}>",
+                          dates[0] + "\n" + station + "\n" + permit
+
   end
 end
 
