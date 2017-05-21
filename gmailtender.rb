@@ -304,6 +304,19 @@ class MH_PGEStatement < MessageHandler
 end
 
 
+class MH_ATT_Wireless_Bill < MessageHandler
+  def self.match headers
+    headers['Subject'] =='Your AT&T wireless bill is ready to view'
+  end
+
+  def handle message, headers
+    return make_org_entry 'at&t wireless bill ready', 'amex:@quicken', '#C',
+                          "<#{Time.now.strftime('%F %a')}>",
+                          "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
+
 class MH_PeetsReload < MessageHandler
   def self.match headers
     headers['Subject'].include?("Your Peet's Card Reload Order") &&
