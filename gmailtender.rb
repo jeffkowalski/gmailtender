@@ -113,9 +113,14 @@ class MessageHandler
     $logger.info headers['From']
     MessageHandler.descendants.each do |handler|
       $logger.debug "matching #{handler}"
-      if handler.match headers
-        handler.new(:gcal => gcal, :gmail => gmail).process message, headers
-        break
+      begin
+        if handler.match headers
+          handler.new(:gcal => gcal, :gmail => gmail).process message, headers
+          break
+        end
+      rescue Exception => e
+        $logger.error e.message
+        $logger.error e.backtrace.inspect
       end
     end
   end
@@ -246,7 +251,7 @@ end
 
 class MH_CapitalOneStatement < MessageHandler
   def self.match headers
-    headers['Subject'].include?("eStatement's now available") &&
+    headers['Subject']&.include?("eStatement's now available") &&
       headers['From'] == "Capital One <capitalone@email.capitalone.com>"
   end
 
@@ -261,7 +266,7 @@ end
 
 class MH_PaypalStatement < MessageHandler
   def self.match headers
-    headers['Subject'].include?("account statement is available") &&
+    headers['Subject']&.include?("account statement is available") &&
       headers['From'] == 'PayPal Statements <paypal@e.paypal.com>'
   end
 
@@ -319,7 +324,7 @@ end
 
 class MH_PeetsReload < MessageHandler
   def self.match headers
-    headers['Subject'].include?("Your Peet's Card Reload Order") &&
+    headers['Subject']&.include?("Your Peet's Card Reload Order") &&
       headers['From'].include?("<customerservice@peets.com>")
   end
 
@@ -363,7 +368,7 @@ end
 
 class MH_AmericanExpressStatement < MessageHandler
   def self.match headers
-    headers['Subject'].index(/Important Notice: Your .* Statement/) &&
+    headers['Subject']&.index(/Important Notice: Your .* Statement/) &&
       headers['From'] == 'American Express <AmericanExpress@welcome.aexp.com>'
   end
 
@@ -408,7 +413,7 @@ end
 
 class MH_AmazonOrder < MessageHandler
   def self.match headers
-    headers['Subject'].include?('Your Amazon.com order') &&
+    headers['Subject']&.include?('Your Amazon.com order') &&
       headers['From'] == '"auto-confirm@amazon.com" <auto-confirm@amazon.com>'
   end
 
@@ -440,7 +445,7 @@ end
 
 class MH_AmazonVideoOrder < MessageHandler
   def self.match headers
-    headers['Subject'].include?('Amazon.com order of') &&
+    headers['Subject']&.include?('Amazon.com order of') &&
       headers['From'] == '"Amazon.com" <digital-no-reply@amazon.com>'
   end
 
