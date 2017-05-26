@@ -414,7 +414,7 @@ end
 class MH_AmazonOrder < MessageHandler
   def self.match headers
     headers['Subject']&.include?('Your Amazon.com order') &&
-      headers['From'] == '"auto-confirm@amazon.com" <auto-confirm@amazon.com>'
+      headers['From'] == '"Amazon.com" <auto-confirm@amazon.com>'
   end
 
   def handle message, headers
