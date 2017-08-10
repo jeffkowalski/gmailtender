@@ -17,6 +17,7 @@ require "net/http"
 require "uri"
 require 'base64'
 require 'thor'
+require 'resolv-replace'
 
 
 LOGFILE = File.join(Dir.home, '.gmailtender.log')
@@ -594,54 +595,36 @@ class GMailTender < Thor
     #
     # initialize the API
     #
-    service = Google::Apis::GmailV1::GmailService.new
-    service.client_options.application_name = APPLICATION_NAME
-    service.authorization = authorize !options[:log]
-    @gmail = service
+    begin
+      service = Google::Apis::GmailV1::GmailService.new
+      service.client_options.application_name = APPLICATION_NAME
+      service.authorization = authorize !options[:log]
+      @gmail = service
 
-    service = Google::Apis::CalendarV3::CalendarService.new
-    service.client_options.application_name = APPLICATION_NAME
-    service.authorization = authorize !options[:log]
-    @gcal = service
+      service = Google::Apis::CalendarV3::CalendarService.new
+      service.client_options.application_name = APPLICATION_NAME
+      service.authorization = authorize !options[:log]
+      @gcal = service
+    rescue Exception => e
+      $logger.error e.message
+      $logger.error e.backtrace.inspect
+    end
   end
 
   desc "scan", "Scan emails"
   def scan
     auth
 
-    #
-    # scan unread inbox messages
-    #
-    messages = (@gmail.list_user_messages 'me', q: 'in:inbox is:unread').messages
+    begin
 
-    $logger.info "#{messages.nil? ? 'no' : messages.length} unread messages found in inbox"
+      #
+      # scan unread inbox messages
+      #
+      messages = (@gmail.list_user_messages 'me', q: 'in:inbox is:unread').messages
 
-    messages.andand.each do |message|
-      $logger.debug "- #{message.id}"
+      $logger.info "#{messages.nil? ? 'no' : messages.length} unread messages found in inbox"
 
-      headers = {}
-      content = (@gmail.get_user_message 'me', message.id).payload
-      content.headers.each do |header|
-        $logger.debug "#{header.name} => #{header.value}"
-        headers[header.name] = header.value
-      end
-
-      MessageHandler.dispatch @gcal, @gmail, message, headers
-    end
-
-
-    #
-    # scan context folders
-    #
-    ['@agendas', '@calls', '@errands', '@home', '@quicken', '@view', '@waiting', '@work'].each do |context|
-      threads = (@gmail.list_user_threads 'me', q: "in:#{context}").threads
-
-      $logger.info "#{threads.nil? ? 'no' : threads.length} messages found in #{context}"
-
-      threads.andand.each do |thread|
-        # find most recent message in thread list
-        messages = (@gmail.get_user_thread 'me', thread.id, fields: "messages(id,internalDate)").messages
-        message = messages.sort_by(&:internal_date).last
+      messages.andand.each do |message|
         $logger.debug "- #{message.id}"
 
         headers = {}
@@ -651,8 +634,38 @@ class GMailTender < Thor
           headers[header.name] = header.value
         end
 
-        MessageHandler.refile @gmail, context, thread, message, headers
+        MessageHandler.dispatch @gcal, @gmail, message, headers
       end
+
+
+      #
+      # scan context folders
+      #
+      ['@agendas', '@calls', '@errands', '@home', '@quicken', '@view', '@waiting', '@work'].each do |context|
+        threads = (@gmail.list_user_threads 'me', q: "in:#{context}").threads
+
+        $logger.info "#{threads.nil? ? 'no' : threads.length} messages found in #{context}"
+
+        threads.andand.each do |thread|
+          # find most recent message in thread list
+          messages = (@gmail.get_user_thread 'me', thread.id, fields: "messages(id,internalDate)").messages
+          message = messages.sort_by(&:internal_date).last
+          $logger.debug "- #{message.id}"
+
+          headers = {}
+          content = (@gmail.get_user_message 'me', message.id).payload
+          content.headers.each do |header|
+            $logger.debug "#{header.name} => #{header.value}"
+            headers[header.name] = header.value
+          end
+
+          MessageHandler.refile @gmail, context, thread, message, headers
+        end
+      end
+
+    rescue Exception => e
+      $logger.error e.message
+      $logger.error e.backtrace.inspect
     end
 
     $logger.info 'done'
