@@ -321,7 +321,7 @@ end
 class MH_PGEStatement < MessageHandler
   def self.match headers
     headers['Subject'] =='Your PG&E Energy Statement is Ready to View' &&
-      headers['From'] == 'CustomerServiceOnline@pge.com'
+      headers['From'] == 'CustomerServiceOnline@billpay.pge.com'
   end
 
   def handle message, headers
