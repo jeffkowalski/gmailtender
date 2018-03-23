@@ -282,28 +282,6 @@ class MH_PaypalStatement < MessageHandler
 end
 
 
-class MH_SquareReceipt < MessageHandler
-  def self.match headers
-    headers['Subject']&.include?("Receipt from") &&
-      headers['From']&.include?("via Square <receipts@messaging.squareup.com>")
-  end
-
-  def handle message, headers
-    payload = (gmail.get_user_message 'me', message.id).payload
-    body = payload.parts[0].body.data;
-
-    # You paid $10.00 with your AMEX ending in 2008 to Pizza Politana on Aug 22
-
-    amount = '' + body[/You paid (\$\d+\.\d+) with/, 1]
-    account = '' + body[/with your (\S+) ending in/, 1].downcase
-    payee = '' + body[/to (.*?) on/, 1].downcase
-    return make_org_entry "receipt for #{payee}", "#{account}:@quicken", '#C',
-                          "<#{Time.now.strftime('%F %a')}>",
-                          amount + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-  end
-end
-
-
 class MH_CloverReceipt < MessageHandler
   def self.match headers
     headers['Subject']&.include?("Your receipt from") &&
@@ -332,8 +310,8 @@ class MH_SquareReceipt < MessageHandler
   end
 
   def handle message, headers
-    payload = (gmail.get_user_message 'me', message.id).payload
-    body = payload.parts[0].body.data;
+    raw = (gmail.get_user_message 'me', message.id, format: 'raw').raw
+    body = raw
 
     # You paid $10.00 with your AMEX ending in 2008 to Pizza Politana on Aug 22
 
