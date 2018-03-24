@@ -76,7 +76,7 @@ class MessageHandler
     $logger.debug "#{body}"
     title = encodeURIcomponent "[#{priority}] #{heading}  :#{context}:"
     body  = encodeURIcomponent "SCHEDULED: #{date}\n#{body}"
-    uri = URI.parse("http://carbon:3333")
+    uri = URI.parse("http://carbon.zt:3333")
     http = Net::HTTP.new(uri.host, uri.port)
     request = Net::HTTP::Get.new("/capture/b/LINK/#{title}/#{body}")
     response = http.request(request)
