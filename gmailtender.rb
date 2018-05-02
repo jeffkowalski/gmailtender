@@ -250,6 +250,25 @@ class MH_CapitalOneTransfer < MessageHandler
 end
 
 
+class MH_EbmudBill < MessageHandler
+  def self.match headers
+    headers['Subject'] == "Your EBMUD bill is available online." &&
+      headers['From'] == "noreply@ebmud.com"
+  end
+
+  def handle message, headers
+    payload = (gmail.get_user_message 'me', message.id).payload
+    body = payload.body.data
+    detail = '' + body[/(Due\s+date:\s*[\d\/]+)/, 1] + "\n" + body[/(balance:\s*\$[\d.]+)/m, 1] + "\n"
+    return make_org_entry 'ebmud bill available', 'orange_checking:@quicken', '#C',
+                          "<#{Time.now.strftime('%F %a')}>",
+                          detail +
+                          "https://www.ebmud.com/customers/account/manage-your-account\n" +
+                          "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
+
 class MH_CapitalOneStatement < MessageHandler
   def self.match headers
     headers['Subject']&.include?("eStatement's now available") &&
