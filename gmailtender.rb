@@ -272,7 +272,7 @@ end
 class MH_CapitalOneStatement < MessageHandler
   def self.match headers
     headers['Subject']&.include?("eStatement's now available") &&
-      headers['From'] == "Capital One <capitalone@email.capitalone.com>"
+      headers['From'] == "Capital One <capitalone@notification.capitalone.com>"
   end
 
   def handle message, headers
