@@ -199,7 +199,7 @@ end
 
 class MH_ChaseCreditCardStatement < MessageHandler
   def self.match headers
-    headers['Subject'] == 'Your credit card statement is available online' &&
+    headers['Subject'] == 'Your credit account statement is available online' &&
       headers['From'] == 'Chase <no-reply@alertsp.chase.com>'
   end
 
