@@ -234,14 +234,15 @@ class MH_CapitalOneTransfer < MessageHandler
   end
 
   def handle message, headers
-    raw = (gmail.get_user_message 'me', message.id, format: 'raw').raw
+    payload = (gmail.get_user_message 'me', message.id).payload
+    body = payload.parts[0].body.data;
     # e.g:
     #  Amount: $39.99
     #  From: Orange Parker Allowance, XXXXXX1099
     #  To: Orange Checking, XXXXXX6515
     #  Memo: game
     #  Transferred On: 08/22/2015
-    detail = raw[/(Amount:.*?Transferred On:.*?\n)/m, 1]
+    detail = body[/(Amount:.*?Transferred On:.*?\n)/m, 1]
     detail.gsub!("\015", '')
     return make_org_entry 'capital one transfer money notice', 'capitalone:@quicken', '#C',
                           "<#{Time.now.strftime('%F %a')}>",
