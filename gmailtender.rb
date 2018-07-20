@@ -366,7 +366,7 @@ class MH_PGEStatement < MessageHandler
   end
 
   def handle message, headers
-    return make_org_entry 'pg&e statement available', 'amex:@quicken', '#C',
+    return make_org_entry 'pg&e statement available', 'orange_checking:@quicken', '#C',
                           "<#{Time.now.strftime('%F %a')}>",
                           "http://www.pge.com/MyEnergy\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
