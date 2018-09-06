@@ -404,7 +404,7 @@ end
 class MH_ComcastBill < MessageHandler
   def self.match headers
     headers['Subject'] == 'Your bill is ready' &&
-      headers['From'] == 'XFINITY My Account <online.communications@alerts.comcast.net>'
+      headers['From'] == 'Xfinity My Account <online.communications@alerts.comcast.net>'
   end
   def handle message, headers
     return make_org_entry 'comcast bill ready', 'amex:@quicken', '#C',
