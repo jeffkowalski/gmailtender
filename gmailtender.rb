@@ -20,7 +20,7 @@ require 'thor'
 require 'resolv-replace'
 
 
-LOGFILE = File.join(Dir.home, '.log', '.gmailtender.log')
+LOGFILE = File.join(Dir.home, '.log', 'gmailtender.log')
 
 OOB_URI = 'urn:ietf:wg:oauth:2.0:oob'
 APPLICATION_NAME = 'gmailtender'
