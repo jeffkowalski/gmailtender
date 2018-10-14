@@ -287,14 +287,14 @@ end
 
 class MH_PaypalStatement < MessageHandler
   def self.match headers
-    headers['Subject']&.include?("account statement is available") &&
-      headers['From'] == 'PayPal Statements <paypal@e.paypal.com>'
+    headers['Subject']&.include?("Your statement is now available") &&
+      headers['From'] == 'PayPal Credit <customercare@paypal.com>'
   end
 
   def handle message, headers
     payload = (gmail.get_user_message 'me', message.id).payload
     body = payload.body.data
-    detail = '' + body[/<a.*?href="(.*?)".*?View Statement<\/a>/m, 1] + "\n"
+    detail = '' + body[/<a.*?href="(.*?)".*?available online<\/a>/m, 1] + "\n"
     return make_org_entry 'account statement available', 'paypal:@quicken', '#C',
                           "<#{Time.now.strftime('%F %a')}>",
                           detail + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
