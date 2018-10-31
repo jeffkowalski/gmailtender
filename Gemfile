@@ -1,6 +1,7 @@
 source 'https://rubygems.org'
 ruby '2.5.1'
-gem 'google-api-client', '0.9'
+gem 'googleauth'
+gem 'google-api-client'
 gem 'andand'
 gem 'thor'
 
