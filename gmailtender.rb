@@ -326,7 +326,7 @@ end
 class MH_SquareReceipt < MessageHandler
   def self.match headers
     headers['Subject']&.include?("Receipt from") &&
-      headers['From']&.include?("via Square <receipts@messaging.squareup.com>")
+      headers['From']&.include?("<receipts@messaging.squareup.com>")
   end
 
   def handle message, headers
