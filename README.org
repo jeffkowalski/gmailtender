@@ -19,7 +19,7 @@ Usage:
   gmailtender.rb scan
 
 Options:
-      [--log], [--no-log]          # log output to ~/.gmailtender.log
+      [--log], [--no-log]          # log output to ~/.log/.gmailtender.log
                                    # Default: true
   -v, [--verbose], [--no-verbose]  # increase verbosity
 

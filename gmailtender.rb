@@ -649,7 +649,7 @@ class GMailTender < Thor
     end
   }
 
-  class_option :log,     :type => :boolean, :default => true, :desc => "log output to ~/.gmailtender.log"
+  class_option :log,     :type => :boolean, :default => true, :desc => "log output to #{LOGFILE}"
   class_option :verbose, :type => :boolean, :aliases => "-v", :desc => "increase verbosity"
 
   desc "auth", "Authorize the application with google services"
