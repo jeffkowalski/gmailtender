@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# coding: utf-8
 
 # GMail API: https://developers.google.com/gmail/api/quickstart/ruby
 #            https://developers.google.com/gmail/api/v1/reference/
@@ -503,6 +504,23 @@ class MH_AmazonOrder < MessageHandler
                                 detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
     end
     return response
+  end
+end
+
+
+class MH_USPSDelivery < MessageHandler
+  def self.match(headers)
+    headers['Subject']&.include?('USPS® Expected Delivery') &&
+      headers['From'] == 'auto-reply@usps.com'
+  end
+
+  def handle(message, headers)
+    date, time, tracking = headers['Subject'].scan(/Delivery .. (.*) arriving by (.*?) (\d+)/).first
+    expected = Time.parse(date + ' ' + time)
+    return make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
+                          "<#{expected.strftime('%F %a %H:%M')}>",
+                          "https://tools.usps.com/go/TrackConfirmAction?tLabels=#{tracking}\n" +
+                          "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
 
