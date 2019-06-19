@@ -199,21 +199,6 @@ class MH_ChaseCreditCardStatement < MessageHandler
 end
 
 
-class MH_ChaseMortgageStatement < MessageHandler
-  def self.match(headers)
-    headers['Subject'] == 'Your mortgage statement is available online.' &&
-      headers['From'] == 'Chase <no-reply@alertsp.chase.com>'
-  end
-
-  def handle(message, _headers)
-    make_org_entry 'chase mortgage statement available', 'chase:@quicken', '#C',
-                   "<#{Time.now.strftime('%F %a')}>",
-                   "https://stmts.chase.com/stmtslist?AI=475283320\n" \
-                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-  end
-end
-
-
 class MH_CapitalOneTransfer < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Transfer Money Notice' &&
@@ -403,21 +388,6 @@ class MH_ComcastBill < MessageHandler
 end
 
 
-class MH_EtradeStatement < MessageHandler
-  def self.match(headers)
-    headers['Subject'] == 'You have a new account statement from E*TRADE Securities' &&
-      headers['From'] == '"E*TRADE SECURITIES LLC" <etrade_stmt_mbox@statement.etradefinancial.com>'
-  end
-
-  def handle(message, _headers)
-    make_org_entry 'etrade statement available', 'etrade:@quicken', '#C',
-                   "<#{Time.now.strftime('%F %a')}>",
-                   "https://edoc.etrade.com/e/t/onlinedocs/docsearch?doc_type=stmt\n" \
-                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-  end
-end
-
-
 class MH_AmericanExpressStatement < MessageHandler
   def self.match(headers)
     headers['Subject']&.index(/Your .* Statement/) &&
@@ -545,85 +515,6 @@ class MH_VanguardStatement < MessageHandler
                    "<#{Time.now.strftime('%F %a')}>",
                    "https://retirementplans.vanguard.com/VGApp/pe/PublicHome\n" \
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-  end
-end
-
-
-class MH_WorkdayFeedbackRequest < MessageHandler
-  def self.match(headers)
-    headers['Subject'] == 'Feedback is requested' &&
-      headers['From'] == 'AutoNotification workday <autodesk@myworkday.com>'
-  end
-
-  def handle(message, _headers)
-    # Mark Davis (110932) has requested that you provide feedback on Anthony Ruto
-    payload = (gmail.get_user_message 'me', message.id).payload
-    body = payload.parts[0].parts[0].body.data
-    requester, employee = body.match(/<span>([^<].*?) \(\d+\) has requested that you provide feedback on (.*?) - Please visit your Workday inbox/).captures
-    detail = body[%r{<a href="(https:\/\/.*?)">Click Here to view the notification details}, 1]
-    make_org_entry "provide feedback on #{employee} to #{requester}", '@work', '#C',
-                   "<#{Time.now.strftime('%F %a')}>",
-                   detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-  end
-end
-
-
-class MH_SelectASpot < MessageHandler
-  def self.match(headers)
-    headers['Subject'] == 'Select-a-Spot.com: Reservation Successful' &&
-      headers['From'] == 'Select-a-Spot <notifications@select-a-spot.com>'
-  end
-
-  def handle(message, _headers)
-    payload = (gmail.get_user_message 'me', message.id).payload
-    body = payload.parts[0].body.data
-    #  <strong>Effective Dates:</strong> April 3, 2017 - April 3, 2017<br/>
-    #  <strong>Facility Details:</strong> Orinda Station, 11 Camino Pablo, Orinda, CA 94563, <a href="http://www.bart.gov/sites/default/files/docs/BART_Parking_Orinda.pdf">view facility map</a><br/>
-    #  <strong>Permit Number: </strong>1260089<br/>
-    #  <p>Price: $6.00</p>
-    dates = body.match(%r{<strong>Effective Dates:</strong> (.*) - (.*)<br/>}).captures
-    facility = body[%r{<strong>Facility Details:</strong> (.*), <a href=".*">view facility map</a><br/>}, 1]
-    station = facility[/(.*?),/, 1].downcase
-    permit = body[%r{<strong>Permit Number: </strong>(.*)<br/>}, 1]
-    price = body[%r{<p>Price: \$(.*)</p>}, 1]
-    $logger.info "#{dates} #{facility} #{permit} #{price}"
-
-    (Date.parse(dates[0])..Date.parse(dates[1])).each do |date|
-      old_events = gcal.list_events('primary',
-                                    single_events: true,
-                                    q: 'bart parking',
-                                    time_min: Time.parse(date.to_s + ' 00:00:00 Pacific Time').iso8601,
-                                    time_max: Time.parse(date.to_s + ' 23:59:59 Pacific Time').iso8601,
-                                    fields: 'items(id,summary,location,organizer,attendees,description,start,end),next_page_token')
-      old_events.items.each do |event|
-        $logger.info "deleting #{event.summary} #{event.id}"
-        gcal.delete_event 'primary', event.id
-      end
-
-      new_event = Google::Apis::CalendarV3::Event.new(
-        summary: "bart parking at #{station}",
-        location: facility,
-        description: "permit #{permit}",
-        start: {
-          date_time: Time.parse(date.to_s + ' 09:30:00 Pacific Time').iso8601
-          # 2015-05-28T09:00:00-07:00
-          # time_zone: 'America/Los_Angeles'
-        },
-        end: {
-          date_time: Time.parse(date.to_s + ' 10:00:00 Pacific Time').iso8601
-          # time_zone: 'America/Los_Angeles'
-        }
-      )
-
-      $logger.info new_event
-
-      # https://developers.google.com/google-apps/calendar/v3/reference/events/insert
-      gcal.insert_event 'primary', new_event
-    end
-
-    make_org_entry "select-a-spot #{price}", 'amazon_visa:@quicken', '#C',
-                   "<#{Time.now.strftime('%F %a')}>",
-                   dates[0] + "\n" + station + "\n" + permit
   end
 end
 
