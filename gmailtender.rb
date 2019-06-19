@@ -64,11 +64,11 @@ class MessageHandler
   end
 
   def encode_uri_component(str)
-    CGI.escape str
+    URI.escape(str, Regexp.new("[^#{URI::PATTERN::UNRESERVED}]"))
   end
 
   def make_org_entry(heading, context, priority, date, body)
-    heading.downcase!
+    heading = heading.downcase
     $logger.debug "TODO [#{priority}] #{heading} #{context}"
     $logger.debug "SCHEDULED: #{date}"
     $logger.debug body.to_s
