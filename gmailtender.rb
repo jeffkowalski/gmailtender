@@ -473,7 +473,7 @@ class MH_USPSDelivery < MessageHandler
   end
 
   def handle(message, headers)
-    date, time, tracking = headers['Subject'].scan(/Delivery .. (.*) arriving by (.*?) (\d+)/).first
+    date, time, tracking = headers['Subject'].scan(/Delivery .. (.*) arriving by (.*?) ([A-Z0-9]+)/).first
     expected = Time.parse(date + ' ' + time)
     make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
                    "<#{expected.strftime('%F %a %H:%M')}>",
