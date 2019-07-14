@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# coding: utf-8
 # frozen_string_literal: true
 
 # GMail API: https://developers.google.com/gmail/api/quickstart/ruby
@@ -179,6 +180,21 @@ class MH_AllstateBill < MessageHandler
                    "<#{Time.now.strftime('%F %a')}>",
                    detail +
                    "https://myaccount.allstate.com/anon/login/login.aspx\n" \
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
+
+class MH_BankOfAmericaCardStatement < MessageHandler
+  def self.match(headers)
+    headers['Subject'] == 'Your Statement Is Available in Mobile and Online Banking' &&
+      headers['From'] == 'Bank of America <onlinebanking@ealerts.bankofamerica.com>'
+  end
+
+  def handle(message, _headers)
+    make_org_entry 'alaska visa credit card statement available', 'bofa:@quicken', '#C',
+                   "<#{Time.now.strftime('%F %a')}>",
+                   "https://secure.bankofamerica.com/mycomm-ecc/statements-docs/\n" \
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
