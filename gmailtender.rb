@@ -451,14 +451,14 @@ end
 
 class MH_AmazonOrder < MessageHandler
   def self.match(headers)
-    headers['Subject']&.include?('Your Amazon.com order') &&
+    headers['Subject']&.index(/Your Amazon.* order/) &&
       headers['From'] == '"Amazon.com" <auto-confirm@amazon.com>'
   end
 
   def handle(message, headers)
     payload = (gmail.get_user_message 'me', message.id).payload
     body = payload.parts[0].body.data
-    order = headers['Subject'][/Your Amazon.com order of (.*)\./, 1] ||
+    order = headers['Subject'][/Your Amazon.* order of (.*)\./, 1] ||
             body[/You ordered\s+(".*?")\s*\.\r\n/m, 1]
     url = body[/View or manage your orders in Your Orders:\r\n?(https:.*?)\r\n/m, 1]
     delivery = body[/\s*((:?(:?Guaranteed|Estimated) delivery date)|(:?Arriving)):\s*\r\n\s*(?<date>.*?)\r\n/m, :date]
