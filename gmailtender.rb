@@ -470,12 +470,12 @@ class MH_AmazonOrder < MessageHandler
     detail = "#{url}\n#{total}"
     response = make_org_entry "order of #{order}", 'amazon:@quicken', '#C',
                               "<#{Time.now.strftime('%F %a')}>",
-                              detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+                              "#{detail}\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
     if response
       detail = url
       response = make_org_entry "delivery of #{order}", 'amazon:@waiting', '#C',
                                 "<#{delivery}>",
-                                detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+                                "#{detail}\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
     end
 
     response
