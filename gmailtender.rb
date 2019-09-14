@@ -491,11 +491,20 @@ class MH_USPSDelivery < MessageHandler
 
   def handle(message, headers)
     date, time, tracking = headers['Subject'].scan(/Delivery .. (.*) arriving by (.*?) ([A-Z0-9]+)/).first
-    expected = Time.parse(date + ' ' + time)
-    make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
-                   "<#{expected.strftime('%F %a %H:%M')}>",
-                   "https://tools.usps.com/go/TrackConfirmAction?tLabels=#{tracking}\n" \
-                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+    if (time)
+      expected = Time.parse(date + ' ' + time)
+      make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
+                     "<#{expected.strftime('%F %a %H:%M')}>",
+                     "https://tools.usps.com/go/TrackConfirmAction?tLabels=#{tracking}\n" \
+                     "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+    else
+      date, tracking = headers['Subject'].scan(/Delivery by (.*?) ([A-Z0-9]+)$/).first
+      expected = DateTime.parse(date)
+      make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
+                     "<#{expected.strftime('%F %a')}>",
+                     "https://tools.usps.com/go/TrackConfirmAction?tLabels=#{tracking}\n" \
+                     "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+    end
   end
 end
 
