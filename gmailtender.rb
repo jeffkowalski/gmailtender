@@ -498,12 +498,22 @@ class MH_USPSDelivery < MessageHandler
                      "https://tools.usps.com/go/TrackConfirmAction?tLabels=#{tracking}\n" \
                      "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
     else
-      date, tracking = headers['Subject'].scan(/Delivery by (.*?) ([A-Z0-9]+)$/).first
-      expected = DateTime.parse(date)
-      make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
-                     "<#{expected.strftime('%F %a')}>",
-                     "https://tools.usps.com/go/TrackConfirmAction?tLabels=#{tracking}\n" \
-                     "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+      date, time1, time2, tracking = headers['Subject'].scan(/Delivery on (.*?) Between (.*) and (.*) ([A-Z0-9]+)$/).first
+      if (time1)
+        expected1 = Time.parse(date + ' ' + time1)
+        expected2 = Time.parse(date + ' ' + time2)
+        make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
+                       "<#{expected1.strftime('%F %a %H:%M')}>--<#{expected2.strftime('%F %a %H:%M')}>",
+                       "https://tools.usps.com/go/TrackConfirmAction?tLabels=#{tracking}\n" \
+                       "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+      else
+        date, tracking = headers['Subject'].scan(/Delivery by (.*?) ([A-Z0-9]+)$/).first
+        expected = DateTime.parse(date)
+        make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
+                       "<#{expected.strftime('%F %a')}>",
+                       "https://tools.usps.com/go/TrackConfirmAction?tLabels=#{tracking}\n" \
+                       "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+      end
     end
   end
 end
