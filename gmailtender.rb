@@ -491,7 +491,7 @@ class MH_USPSDelivery < MessageHandler
 
   def handle(message, headers)
     date, time, tracking = headers['Subject'].scan(/Delivery .. (.*) arriving by (.*?) ([A-Z0-9]+)/).first
-    if (time)
+    if time
       expected = Time.parse(date + ' ' + time)
       make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
                      "<#{expected.strftime('%F %a %H:%M')}>",
@@ -499,7 +499,7 @@ class MH_USPSDelivery < MessageHandler
                      "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
     else
       date, time1, time2, tracking = headers['Subject'].scan(/Delivery on (.*?) Between (.*) and (.*) ([A-Z0-9]+)$/).first
-      if (time1)
+      if time1
         expected1 = Time.parse(date + ' ' + time1)
         expected2 = Time.parse(date + ' ' + time2)
         make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
@@ -531,7 +531,7 @@ class MH_AmazonVideoOrder < MessageHandler
     order = headers['Subject'][/Amazon.com order of (.*)\./, 1]
     total = body[/Grand Total:\s+(\$.*)\r\n/, 1]
     $logger.info "#{order} #{total}"
-
+r
     detail = total.to_s
     make_org_entry "order of #{order}", 'amazon:@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
