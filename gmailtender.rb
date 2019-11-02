@@ -507,7 +507,7 @@ class MH_USPSDelivery < MessageHandler
                        "https://tools.usps.com/go/TrackConfirmAction?tLabels=#{tracking}\n" \
                        "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
       else
-        date, tracking = headers['Subject'].scan(/Delivery by (.*?) ([A-Z0-9]+)$/).first
+        _by, date, tracking = headers['Subject'].scan(/Delivery (on|by) (.*?) ([A-Z0-9]+)$/).first
         expected = DateTime.parse(date)
         make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
                        "<#{expected.strftime('%F %a')}>",
