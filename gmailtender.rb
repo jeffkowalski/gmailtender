@@ -531,7 +531,7 @@ class MH_AmazonVideoOrder < MessageHandler
     order = headers['Subject'][/Amazon.com order of (.*)\./, 1]
     total = body[/Grand Total:\s+(\$.*)\r\n/, 1]
     $logger.info "#{order} #{total}"
-r
+
     detail = total.to_s
     make_org_entry "order of #{order}", 'amazon:@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
