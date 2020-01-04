@@ -7,7 +7,7 @@ GEM
     coderay (1.1.2)
     declarative (0.0.10)
     declarative-option (0.1.0)
-    faraday (0.17.1)
+    faraday (0.17.3)
       multipart-post (>= 1.2, < 3)
     google-api-client (0.36.3)
       addressable (~> 2.5, >= 2.5.1)
@@ -51,7 +51,7 @@ GEM
       multi_json (~> 1.10)
     thor (1.0.1)
     uber (0.1.0)
-    yard (0.9.20)
+    yard (0.9.22)
 
 PLATFORMS
   ruby
@@ -65,8 +65,5 @@ DEPENDENCIES
   pry-doc (>= 0.6.0)
   thor
 
-RUBY VERSION
-   ruby 2.5.1p57
-
 BUNDLED WITH
-   2.1.2
+   2.1.3
