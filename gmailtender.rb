@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-# coding: utf-8
+# coding: utf-8     # rubocop:disable Style/Encoding
 # frozen_string_literal: true
 
 # GMail API: https://developers.google.com/gmail/api/quickstart/ruby
@@ -12,7 +12,6 @@ require 'googleauth/stores/file_token_store'
 require 'google/apis/gmail_v1'
 require 'google/apis/calendar_v3'
 
-require 'andand'
 require 'fileutils'
 require 'logger'
 require 'net/http'
@@ -64,17 +63,13 @@ class MessageHandler
     ObjectSpace.each_object(Class).select { |klass| klass < self }
   end
 
-  def encode_uri_component(str)
-    URI.escape(str, Regexp.new("[^#{URI::PATTERN::UNRESERVED}]"))
-  end
-
   def make_org_entry(heading, context, priority, date, body)
     heading = heading.downcase
     $logger.debug "TODO [#{priority}] #{heading} #{context}"
     $logger.debug "SCHEDULED: #{date}"
     $logger.debug body.to_s
-    title = encode_uri_component "[#{priority}] #{heading}  :#{context}:"
-    body  = encode_uri_component "SCHEDULED: #{date}\n#{body}"
+    title = URI.encode_www_form_component "[#{priority}] #{heading}  :#{context}:"
+    body  = URI.encode_www_form_component "SCHEDULED: #{date}\n#{body}"
     uri = URI.parse 'http://carbon.zt:3333'
     http = Net::HTTP.new uri.host, uri.port
     request = Net::HTTP::Get.new "/capture/b/LINK/#{title}/#{body}"
@@ -615,7 +610,7 @@ class GMailTender < Thor
 
       $logger.info "#{messages.nil? ? 'no' : messages.length} unread messages found in inbox"
 
-      messages.andand.each do |message|
+      messages&.each do |message|
         $logger.debug "- #{message.id}"
 
         headers = {}
@@ -636,7 +631,7 @@ class GMailTender < Thor
 
         $logger.info "#{threads.nil? ? 'no' : threads.length} messages found in #{context}"
 
-        threads.andand.each do |thread|
+        threads&.each do |thread|
           # find most recent message in thread list
           messages = (@gmail.get_user_thread 'me', thread.id, fields: 'messages(id,internalDate)').messages
           message = messages.max_by(&:internal_date)

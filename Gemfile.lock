@@ -3,7 +3,6 @@ GEM
   specs:
     addressable (2.7.0)
       public_suffix (>= 2.0.2, < 5.0)
-    andand (1.3.3)
     coderay (1.1.2)
     declarative (0.0.10)
     declarative-option (0.1.0)
@@ -57,7 +56,6 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  andand
   google-api-client
   googleauth
   method_source (>= 0.8.2)
