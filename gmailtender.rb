@@ -15,7 +15,7 @@ require 'google/apis/calendar_v3'
 require 'fileutils'
 require 'logger'
 require 'net/http'
-require 'uri'
+require 'addressable/uri'
 require 'base64'
 require 'thor'
 require 'resolv-replace'
@@ -68,9 +68,9 @@ class MessageHandler
     $logger.debug "TODO [#{priority}] #{heading} #{context}"
     $logger.debug "SCHEDULED: #{date}"
     $logger.debug body.to_s
-    title = URI.encode_www_form_component "[#{priority}] #{heading}  :#{context}:"
-    body  = URI.encode_www_form_component "SCHEDULED: #{date}\n#{body}"
-    uri = URI.parse 'http://carbon.zt:3333'
+    title = Addressable::URI.encode_component "[#{priority}] #{heading}  :#{context}:", Addressable::URI::CharacterClasses::UNRESERVED
+    body  = Addressable::URI.encode_component "SCHEDULED: #{date}\n#{body}", Addressable::URI::CharacterClasses::UNRESERVED
+    uri = Addressable::URI.parse 'http://carbon.zt:3333'
     http = Net::HTTP.new uri.host, uri.port
     request = Net::HTTP::Get.new "/capture/b/LINK/#{title}/#{body}"
     response = http.request(request)
