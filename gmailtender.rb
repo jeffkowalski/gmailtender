@@ -195,6 +195,20 @@ class MH_BankOfAmericaCardStatement < MessageHandler
 end
 
 
+class MH_LGTubClean < MessageHandler
+  def self.match(headers)
+    headers['Subject'] == 'It’s time to perform a tub clean on your LG Washing Machine' &&
+      headers['From'] == 'lgcarecenter@lge.com'
+  end
+
+  def handle(message, _headers)
+    make_org_entry 'perform tub clean', '@home', '#C',
+                   "<#{Time.now.strftime('%F %a')}>",
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
+
 class MH_ChaseCreditCardStatement < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Your credit account statement is available online' &&
