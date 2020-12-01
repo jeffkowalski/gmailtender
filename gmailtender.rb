@@ -180,21 +180,6 @@ class MH_AllstateBill < MessageHandler
 end
 
 
-class MH_BankOfAmericaCardStatement < MessageHandler
-  def self.match(headers)
-    headers['Subject'] == 'Your Statement Is Available in Mobile and Online Banking' &&
-      headers['From'] == 'Bank of America <onlinebanking@ealerts.bankofamerica.com>'
-  end
-
-  def handle(message, _headers)
-    make_org_entry 'alaska visa credit card statement available', 'bofa:@quicken', '#C',
-                   "<#{Time.now.strftime('%F %a')}>",
-                   "https://secure.bankofamerica.com/mycomm-ecc/statements-docs/\n" \
-                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-  end
-end
-
-
 class MH_LGTubClean < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'It’s time to perform a tub clean on your LG Washing Machine' &&
@@ -383,6 +368,20 @@ class MH_ATT_Wireless_Bill < MessageHandler
 end
 
 
+class MH_SonicBill < MessageHandler
+  def self.match(headers)
+    headers['Subject'] == 'Payment Scheduled' &&
+      headers['From'].include?('Sonic Billing')
+  end
+
+  def handle(message, _headers)
+    make_org_entry 'sonic bill', 'visa:@quicken', '#C',
+                   "<#{Time.now.strftime('%F %a')}>",
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
+
 class MH_PeetsReload < MessageHandler
   def self.match(headers)
     headers['Subject']&.include?("Your Peet's Card Reload Order") &&
@@ -390,24 +389,9 @@ class MH_PeetsReload < MessageHandler
   end
 
   def handle(message, _headers)
-    make_org_entry 'peet\'s card reload order', 'amex:@quicken', '#C',
+    make_org_entry 'peet\'s card reload order', ':@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
                    "$50\n" \
-                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-  end
-end
-
-
-class MH_ComcastBill < MessageHandler
-  def self.match(headers)
-    headers['Subject']&.include?('Your bill is ready') &&
-      headers['From'] == 'Xfinity My Account <online.communications@alerts.comcast.net>'
-  end
-
-  def handle(message, _headers)
-    make_org_entry 'comcast bill ready', 'amex:@quicken', '#C',
-                   "<#{Time.now.strftime('%F %a')}>",
-                   "https://customer.xfinity.com/Secure/MyAccount/\n" \
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
