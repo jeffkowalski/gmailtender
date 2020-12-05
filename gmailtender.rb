@@ -476,6 +476,29 @@ class MH_AmazonOrder < MessageHandler
 end
 
 
+class MH_UPSMyChoice < MessageHandler
+  def self.match(headers)
+    headers['Subject'] == 'UPS Update: Package Scheduled for Delivery Today' &&
+      headers['From'] == 'UPS My Choice <mcinfo@ups.com>'
+  end
+
+  def handle(message, headers)
+    payload = (gmail.get_user_message 'me', message.id).payload
+    body = payload.parts[0].body.data
+
+    date = body.scan(%r{Scheduled Delivery Date:.*?(\d+/\d+/\d+)})&.first&.first # Scheduled Delivery Date: Friday,  12/04/2020
+    time = body.scan(/Estimated Delivery Time:.*?(\d+:\d+ [AP]M).*?(\d+:\d+ [AP]M)/)&.first # Estimated Delivery Time: 02:45 PM  -  06:45 PM
+    tracking = body.scan(/Tracking Number:.*?([A-Z0-9]+)/)&.first&.first
+    expected = time.map { |t| Time.parse("#{date} #{t}") }
+
+    make_org_entry "ups delivery of #{tracking}", 'ups:@waiting', '#C',
+                   "<#{expected[0].strftime('%F %a %H:%M')}>--<#{expected[1].strftime('%F %a %H:%M')}>",
+                   "https://www.ups.com/track?loc=null&tracknum=#{tracking}&requester=WT/trackdetails\n" \
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
+
 class MH_USPSDelivery < MessageHandler
   def self.match(headers)
     headers['Subject']&.include?('USPS® Expected Delivery') &&
@@ -485,7 +508,7 @@ class MH_USPSDelivery < MessageHandler
   def handle(message, headers)
     date, time, tracking = headers['Subject'].scan(/Delivery .. (.*) arriving by (.*?) ([A-Z0-9]+)/).first
     if time
-      expected = Time.parse(date + ' ' + time)
+      expected = Time.parse("#{date} #{time}")
       make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
                      "<#{expected.strftime('%F %a %H:%M')}>",
                      "https://tools.usps.com/go/TrackConfirmAction?tLabels=#{tracking}\n" \
@@ -493,8 +516,8 @@ class MH_USPSDelivery < MessageHandler
     else
       date, time1, time2, tracking = headers['Subject'].scan(/Delivery on (.*?) Between (.*) and (.*) ([A-Z0-9]+)$/).first
       if time1
-        expected1 = Time.parse(date + ' ' + time1)
-        expected2 = Time.parse(date + ' ' + time2)
+        expected1 = Time.parse("#{date} #{time1}")
+        expected2 = Time.parse("#{date} #{time2}")
         make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
                        "<#{expected1.strftime('%F %a %H:%M')}>--<#{expected2.strftime('%F %a %H:%M')}>",
                        "https://tools.usps.com/go/TrackConfirmAction?tLabels=#{tracking}\n" \
