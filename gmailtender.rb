@@ -478,7 +478,8 @@ end
 
 class MH_UPSMyChoice < MessageHandler
   def self.match(headers)
-    headers['Subject'] == 'UPS Update: Package Scheduled for Delivery Today' &&
+    (headers['Subject'] == 'UPS Update: Package Scheduled for Delivery Today' ||
+     headers['Subject'].include?('UPS Ship Notification')) &&
       headers['From'] == 'UPS My Choice <mcinfo@ups.com>'
   end
 
@@ -489,12 +490,19 @@ class MH_UPSMyChoice < MessageHandler
     date = body.scan(%r{Scheduled Delivery Date:.*?(\d+/\d+/\d+)})&.first&.first # Scheduled Delivery Date: Friday,  12/04/2020
     time = body.scan(/Estimated Delivery Time:.*?(\d+:\d+ [AP]M).*?(\d+:\d+ [AP]M)/)&.first # Estimated Delivery Time: 02:45 PM  -  06:45 PM
     tracking = body.scan(/Tracking Number:.*?([A-Z0-9]+)/)&.first&.first
-    expected = time.map { |t| Time.parse("#{date} #{t}") }
-
-    make_org_entry "ups delivery of #{tracking}", 'ups:@waiting', '#C',
-                   "<#{expected[0].strftime('%F %a %H:%M')}>--<#{expected[1].strftime('%F %a %H:%M')}>",
-                   "https://www.ups.com/track?loc=null&tracknum=#{tracking}&requester=WT/trackdetails\n" \
-                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+    if time
+      expected = time.map { |t| Time.parse("#{date} #{t}") }
+      make_org_entry "ups delivery of #{tracking}", 'ups:@waiting', '#C',
+                     "<#{expected[0].strftime('%F %a %H:%M')}>--<#{expected[1].strftime('%F %a %H:%M')}>",
+                     "https://www.ups.com/track?loc=null&tracknum=#{tracking}&requester=WT/trackdetails\n" \
+                     "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+    else
+      expected = Time.parse(date)
+      make_org_entry "ups delivery of #{tracking}", 'ups:@waiting', '#C',
+                     "<#{expected.strftime('%F %a')}>",
+                     "https://www.ups.com/track?loc=null&tracknum=#{tracking}&requester=WT/trackdetails\n" \
+                     "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+    end
   end
 end
 
