@@ -496,7 +496,7 @@ end
 
 class MH_UPSMyChoice < MessageHandler
   def self.match(headers)
-    (headers['Subject'] == 'UPS Update: Package Scheduled for Delivery Today' ||
+    (headers['Subject'].include?('UPS Update: Package Scheduled for Delivery') ||
      headers['Subject'].include?('UPS Ship Notification')) &&
       headers['From'] == 'UPS My Choice <mcinfo@ups.com>'
   end
