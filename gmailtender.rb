@@ -427,6 +427,25 @@ class MH_VerizonBill < MessageHandler
 end
 
 
+class MH_GoogleFiStatement < MessageHandler
+  def self.match(headers)
+    headers['Subject'] == 'Your Google Fi monthly statement' &&
+      headers['From'] == 'Google Payments <payments-noreply@google.com>'
+  end
+
+  def handle(message, _headers)
+    payload = (gmail.get_user_message 'me', message.id).payload
+    body = payload.parts[0].parts[0].body.data
+    total = body.scan(/Your total is (\$\d+\.\d+)/)&.first&.first # Your total is $40.51
+    date = body.scan(/Auto-payment is scheduled for (\w+ \d+, \d+)/)&.first&.first # Auto-payment is scheduled for December 21, 2020
+    make_org_entry 'verizon bill available', 'visa:@quicken', '#C',
+                   "<#{Time.now.strftime('%F %a')}>",
+                   "https://ebillpay.verizonwireless.com/vzw/accountholder/mybill/BillingSummary.action\n" \
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}\n#{total}\n#{date}"
+  end
+end
+
+
 class MH_AmazonSubscribeAndSave < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Amazon Subscribe & Save: Review Your Monthly Delivery' &&
