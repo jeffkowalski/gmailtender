@@ -438,9 +438,8 @@ class MH_GoogleFiStatement < MessageHandler
     body = payload.parts[0].parts[0].body.data
     total = body.scan(/Your total is (\$\d+\.\d+)/)&.first&.first # Your total is $40.51
     date = body.scan(/Auto-payment is scheduled for (\w+ \d+, \d+)/)&.first&.first # Auto-payment is scheduled for December 21, 2020
-    make_org_entry 'verizon bill available', 'visa:@quicken', '#C',
+    make_org_entry 'google fi statement', 'visa:@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
-                   "https://ebillpay.verizonwireless.com/vzw/accountholder/mybill/BillingSummary.action\n" \
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}\n#{total}\n#{date}"
   end
 end
