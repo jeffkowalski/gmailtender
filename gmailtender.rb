@@ -196,14 +196,14 @@ end
 
 class MH_ChaseCreditCardStatement < MessageHandler
   def self.match(headers)
-    headers['Subject'] == 'Your credit account statement is available online' &&
+    headers['Subject'] == 'Your credit card statement is ready' &&
       headers['From'] == 'Chase <no-reply@alertsp.chase.com>'
   end
 
   def handle(message, _headers)
     make_org_entry 'chase credit card statement available', 'chase:@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
-                   "https://stmts.chase.com/stmtslist?AI=16258879\n" \
+                   "https://secure05a.chase.com/web/auth/dashboard#/dashboard/documents/myDocs/index;mode=accounts;documentType=STATEMENTS\n" \
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
