@@ -414,15 +414,19 @@ end
 
 class MH_VerizonBill < MessageHandler
   def self.match(headers)
-    headers['Subject'] == 'Your online bill is available.' &&
+    headers['Subject'] == 'Your online bill is ready.' &&
       headers['From'] == 'Verizon Wireless <VZWMail@ecrmemail.verizonwireless.com>'
   end
 
   def handle(message, _headers)
+    payload = (gmail.get_user_message 'me', message.id).payload
+    body = payload.parts[0].parts[0].body.data
+    total = body.scan(/ Total amount due: .*? (\$\d+\.\d+) /)&.first&.first # Your total is $40.51
+    date = body.scan(%r{ Auto Pay date: .*? (\d+/\d+/\d+) })&.first&.first # Auto-payment is scheduled for December 21, 2020
     make_org_entry 'verizon bill available', 'amex:@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
                    "https://ebillpay.verizonwireless.com/vzw/accountholder/mybill/BillingSummary.action\n" \
-                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}\n#{total}\n#{date}"
   end
 end
 
