@@ -70,7 +70,7 @@ class MessageHandler
     $logger.debug body.to_s
     title = Addressable::URI.encode_component "[#{priority}] #{heading}  :#{context}:", Addressable::URI::CharacterClasses::UNRESERVED
     body  = Addressable::URI.encode_component "SCHEDULED: #{date}\n#{body}", Addressable::URI::CharacterClasses::UNRESERVED
-    uri = Addressable::URI.parse 'http://carbon.zt:3333'
+    uri = Addressable::URI.parse 'http://cube.zt:3333'
     http = Net::HTTP.new uri.host, uri.port
     request = Net::HTTP::Get.new "/capture/b/LINK/#{title}/#{body}"
     response = http.request(request)
