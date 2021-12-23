@@ -70,9 +70,12 @@ class MessageHandler
     $logger.debug body.to_s
     title = Addressable::URI.encode_component "[#{priority}] #{heading}  :#{context}:", Addressable::URI::CharacterClasses::UNRESERVED
     body  = Addressable::URI.encode_component "SCHEDULED: #{date}\n#{body}", Addressable::URI::CharacterClasses::UNRESERVED
-    uri = Addressable::URI.parse 'http://cube.zt:3333'
+    uri = "http://cube.zt:3333/capture/b/LINK/#{title}/#{body}"
+    $logger.info uri
+    uri = Addressable::URI.parse uri
+
     http = Net::HTTP.new uri.host, uri.port
-    request = Net::HTTP::Get.new "/capture/b/LINK/#{title}/#{body}"
+    request = Net::HTTP::Get.new uri.path
     response = http.request(request)
     $logger.error "make_org_entry gave response #{response.code} #{response.message}" if response.code != '200'
 
