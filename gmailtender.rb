@@ -77,7 +77,7 @@ class MessageHandler
     http = Net::HTTP.new uri.host, uri.port
     request = Net::HTTP::Get.new uri.path
     response = http.request(request)
-    $logger.error "make_org_entry gave response #{response.code} #{response.message}" if response.code != '200'
+    $logger.error "make_org_entry gave response #{response.code} #{response.message} #{response.body}" if response.code != '200'
 
     response.code == '200'
   end
