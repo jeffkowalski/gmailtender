@@ -415,6 +415,21 @@ class MH_AmericanExpressStatement < MessageHandler
 end
 
 
+class MH_BNYMellonStatement < MessageHandler
+  def self.match(headers)
+    headers['Subject'] == 'BNY Mellon, N.A. - E-Statement Notification' &&
+      headers['From'] == 'noreply@yourmortgageonline.com'
+  end
+
+  def handle(message, _headers)
+    make_org_entry 'mortgage statement available', 'bny_mellon:@quicken', '#C',
+                   "<#{Time.now.strftime('%F %a')}>",
+                   "www.yourmortgageonline.com\n" \
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
+
 class MH_VerizonBill < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Your online bill is ready.' &&
