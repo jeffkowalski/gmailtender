@@ -403,13 +403,13 @@ end
 class MH_AmericanExpressStatement < MessageHandler
   def self.match(headers)
     headers['Subject']&.index(/Your .* Statement/) &&
-      headers['From'] == 'American Express <DoNotReplyUS@welcome.aexp.com>'
+      headers['From'] == 'American Express <DoNotReplyUS@welcome.americanexpress.com>'
   end
 
   def handle(message, _headers)
     make_org_entry 'account statement available', 'amex:@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
-                   "https://online.americanexpress.com/myca/statementimage/us/welcome.do?request_type=authreg_StatementCycles&Face=en_US&sorted_index=0\n" \
+                   "https://global.americanexpress.com/activity/statements?request_type=authreg_StatementCycles\n" \
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
