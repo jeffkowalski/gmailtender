@@ -43,7 +43,7 @@ def authorize(interactive)
   credentials = authorizer.get_credentials(user_id)
   if credentials.nil? && interactive
     url = authorizer.get_authorization_url(base_url: OOB_URI)
-    code = ask("Open the following URL in the browser and enter the resulting code after authorization\n" + url)
+    code = ask("Open the following URL in the browser and enter the resulting code after authorization\n#{url}")
     credentials = authorizer.get_and_store_credentials_from_code(
       user_id: user_id, code: code, base_url: OOB_URI
     )
@@ -130,7 +130,7 @@ class MessageHandler
     name = addr[/"?(.*?)"?\s</, 1] || addr[/<?(.*?)@/, 1]
     unless name.nil?
       name.downcase!
-      name.gsub!(/[\. ]/, '_')
+      name.gsub!(/[. ]/, '_')
     end
 
     name
@@ -155,7 +155,6 @@ class MessageHandler
     handler.unlabel_thread thread, context if response
   end
 end
-
 
 class MH_AllstateBill < MessageHandler
   def self.match(headers)
@@ -182,7 +181,6 @@ class MH_AllstateBill < MessageHandler
   end
 end
 
-
 class MH_LGTubClean < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'It’s time to perform a tub clean on your LG Washing Machine' &&
@@ -195,7 +193,6 @@ class MH_LGTubClean < MessageHandler
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
-
 
 class MH_ChaseCreditCardStatement < MessageHandler
   def self.match(headers)
@@ -210,7 +207,6 @@ class MH_ChaseCreditCardStatement < MessageHandler
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
-
 
 class MH_CapitalOneTransfer < MessageHandler
   def self.match(headers)
@@ -235,7 +231,6 @@ class MH_CapitalOneTransfer < MessageHandler
   end
 end
 
-
 class MH_EbmudBill < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Your EBMUD bill is available online.' &&
@@ -245,7 +240,7 @@ class MH_EbmudBill < MessageHandler
   def handle(message, _headers)
     payload = (gmail.get_user_message 'me', message.id).payload
     body = payload.body.data
-    detail = '' + body[%r{(Due\s+date:\s*[\d\/]+)}, 1] + "\n" + body[/(balance:\s*\$[\d.]+)/m, 1] + "\n"
+    detail = "#{body[%r{(Due\s+date:\s*[\d/]+)}, 1]}\n#{body[/(balance:\s*\$[\d.]+)/m, 1]}\n"
     make_org_entry 'ebmud bill available', 'orange_checking:@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
                    detail +
@@ -253,7 +248,6 @@ class MH_EbmudBill < MessageHandler
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
-
 
 class MH_CapitalOneStatement < MessageHandler
   def self.match(headers)
@@ -269,7 +263,6 @@ class MH_CapitalOneStatement < MessageHandler
   end
 end
 
-
 class MH_PaypalStatement < MessageHandler
   def self.match(headers)
     headers['Subject']&.include?('Your statement is now available') &&
@@ -279,13 +272,12 @@ class MH_PaypalStatement < MessageHandler
   def handle(message, _headers)
     payload = (gmail.get_user_message 'me', message.id).payload
     body = payload.body.data
-    detail = '' + body[%r{<a.*?href="(.*?)".*?available online<\/a>}m, 1] + "\n"
+    detail = "#{body[%r{<a.*?href="(.*?)".*?available online</a>}m, 1]}\n"
     make_org_entry 'account statement available', 'paypal:@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
                    detail + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
-
 
 class MH_CloverReceipt < MessageHandler
   def self.match(headers)
@@ -299,14 +291,13 @@ class MH_CloverReceipt < MessageHandler
 
     # $6.95 total
 
-    amount = '' + body[/(\$\d+\.\d+) total/, 1]
-    payee = '' +  headers['Subject'][/Your receipt from (.*)/, 1].downcase
+    amount = body[/(\$\d+\.\d+) total/, 1].to_s
+    payee  = headers['Subject'][/Your receipt from (.*)/, 1].to_s.downcase
     make_org_entry "receipt for #{payee}", '@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
-                   amount + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+                   "#{amount}\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
-
 
 class MH_SquareReceipt < MessageHandler
   def self.match(headers)
@@ -320,15 +311,14 @@ class MH_SquareReceipt < MessageHandler
 
     # You paid $10.00 with your AMEX ending in 2008 to Pizza Politana on Aug 22
 
-    amount = '' + body[/You paid (\$\d+\.\d+) with/, 1]
-    account = '' + body[/with your (\S+) ending in/, 1].downcase
-    payee = '' + body[/to (.*?) on/, 1].downcase
+    amount  = body[/You paid (\$\d+\.\d+) with/, 1].to_s
+    account = body[/with your (\S+) ending in/, 1].to_s.downcase
+    payee   = body[/to (.*?) on/, 1].to_s.downcase
     make_org_entry "receipt for #{payee}", "#{account}:@quicken", '#C',
                    "<#{Time.now.strftime('%F %a')}>",
-                   amount + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+                   "#{amount}\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
-
 
 class MH_PershingStatement < MessageHandler
   def self.match(headers)
@@ -343,7 +333,6 @@ class MH_PershingStatement < MessageHandler
   end
 end
 
-
 class MH_PGEStatement < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Your PG&E Energy Statement is Ready to View' &&
@@ -357,7 +346,6 @@ class MH_PGEStatement < MessageHandler
   end
 end
 
-
 class MH_ATT_Wireless_Bill < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Your AT&T wireless bill is ready to view'
@@ -369,7 +357,6 @@ class MH_ATT_Wireless_Bill < MessageHandler
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
-
 
 class MH_SonicBill < MessageHandler
   def self.match(headers)
@@ -383,7 +370,6 @@ class MH_SonicBill < MessageHandler
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
-
 
 class MH_PeetsReload < MessageHandler
   def self.match(headers)
@@ -399,7 +385,6 @@ class MH_PeetsReload < MessageHandler
   end
 end
 
-
 class MH_AmericanExpressStatement < MessageHandler
   def self.match(headers)
     headers['Subject']&.index(/Your .* Statement/) &&
@@ -414,7 +399,6 @@ class MH_AmericanExpressStatement < MessageHandler
   end
 end
 
-
 class MH_BNYMellonStatement < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'BNY Mellon, N.A. - E-Statement Notification' &&
@@ -428,7 +412,6 @@ class MH_BNYMellonStatement < MessageHandler
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
-
 
 class MH_VerizonBill < MessageHandler
   def self.match(headers)
@@ -448,7 +431,6 @@ class MH_VerizonBill < MessageHandler
   end
 end
 
-
 class MH_GoogleFiStatement < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Your Google Fi monthly statement' &&
@@ -466,7 +448,6 @@ class MH_GoogleFiStatement < MessageHandler
   end
 end
 
-
 class MH_AmazonSubscribeAndSave < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Amazon Subscribe & Save: Review Your Monthly Delivery' &&
@@ -480,7 +461,6 @@ class MH_AmazonSubscribeAndSave < MessageHandler
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
-
 
 class MH_AmazonOrder < MessageHandler
   def self.match(headers)
@@ -515,7 +495,6 @@ class MH_AmazonOrder < MessageHandler
   end
 end
 
-
 class MH_UPSMyChoice < MessageHandler
   def self.match(headers)
     (headers['Subject'].include?('UPS Update: Package Scheduled for Delivery') ||
@@ -546,7 +525,6 @@ class MH_UPSMyChoice < MessageHandler
     end
   end
 end
-
 
 class MH_USPSDelivery < MessageHandler
   def self.match(headers)
@@ -583,7 +561,6 @@ class MH_USPSDelivery < MessageHandler
   end
 end
 
-
 class MH_AmazonVideoOrder < MessageHandler
   def self.match(headers)
     headers['Subject']&.include?('Amazon.com order of') &&
@@ -600,10 +577,9 @@ class MH_AmazonVideoOrder < MessageHandler
     detail = total.to_s
     make_org_entry "order of #{order}", 'amazon:@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
-                   detail + "\n" + "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+                   "#{detail}\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
-
 
 class MH_VanguardStatement < MessageHandler
   def self.match(headers)
@@ -618,7 +594,6 @@ class MH_VanguardStatement < MessageHandler
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
-
 
 class GMailTender < Thor
   no_commands do
@@ -637,7 +612,7 @@ class GMailTender < Thor
     def setup_logger
       redirect_output if options[:log]
 
-      $logger = Logger.new STDOUT
+      $logger = Logger.new $stdout
       $logger.level = options[:verbose] ? Logger::DEBUG : Logger::INFO
       $logger.info 'starting'
     end
