@@ -421,9 +421,9 @@ class MH_VerizonBill < MessageHandler
 
   def handle(message, _headers)
     payload = (gmail.get_user_message 'me', message.id).payload
-    body = payload.parts[0].parts[0].body.data
-    total = body.scan(/ Total amount due: .*? (\$\d+\.\d+) /)&.first&.first # Your total is $40.51
-    date = body.scan(%r{ Auto Pay date: .*? (\d+/\d+/\d+) })&.first&.first # Auto-payment is scheduled for December 21, 2020
+    body = payload.body.data
+    total = body.scan(/Total amount due:.*?(\$\d+\.\d+)/)&.first&.first
+    date = body.scan(%r{Auto Pay date:.*?(\d{2}/\d{2}/\d{4})})&.first&.first
     make_org_entry 'verizon bill available', 'amex:@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
                    "https://ebillpay.verizonwireless.com/vzw/accountholder/mybill/BillingSummary.action\n" \
