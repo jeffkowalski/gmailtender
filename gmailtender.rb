@@ -22,7 +22,7 @@ require 'resolv-replace'
 
 LOGFILE = File.join(Dir.home, '.log', 'gmailtender.log')
 
-OOB_URI = 'urn:ietf:wg:oauth:2.0:oob'
+BASE_URI = 'https://www.google.com'
 APPLICATION_NAME = 'gmailtender'
 CLIENT_SECRETS_PATH = 'client_secret.json'
 CREDENTIALS_PATH = File.join(Dir.home, '.credentials', 'gmailtender.yaml')
@@ -38,14 +38,14 @@ def authorize(interactive)
   FileUtils.mkdir_p(File.dirname(CREDENTIALS_PATH))
   client_id = Google::Auth::ClientId.from_file(CLIENT_SECRETS_PATH)
   token_store = Google::Auth::Stores::FileTokenStore.new(file: CREDENTIALS_PATH)
-  authorizer = Google::Auth::UserAuthorizer.new(client_id, SCOPE, token_store)
+  authorizer = Google::Auth::UserAuthorizer.new(client_id, SCOPE, token_store, '')
   user_id = 'default'
   credentials = authorizer.get_credentials(user_id)
   if credentials.nil? && interactive
-    url = authorizer.get_authorization_url(base_url: OOB_URI)
+    url = authorizer.get_authorization_url(base_url: BASE_URI, scope: SCOPE)
     code = ask("Open the following URL in the browser and enter the resulting code after authorization\n#{url}")
     credentials = authorizer.get_and_store_credentials_from_code(
-      user_id: user_id, code: code, base_url: OOB_URI
+      user_id: user_id, code: code, base_url: BASE_URI
     )
   end
   credentials
