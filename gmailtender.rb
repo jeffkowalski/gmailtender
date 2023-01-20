@@ -194,6 +194,20 @@ class MH_LGTubClean < MessageHandler
   end
 end
 
+class MH_ChaseCheckingStatement < MessageHandler
+  def self.match(headers)
+    headers['Subject']&.include?('Your statement is ready for account ending in') &&
+      headers['From'] == 'Chase <no-reply@alertsp.chase.com>'
+  end
+
+  def handle(message, _headers)
+    make_org_entry 'chase checking statement available', 'chase:@quicken', '#C',
+                   "<#{Time.now.strftime('%F %a')}>",
+                   "https://secure05a.chase.com/web/auth/dashboard#/dashboard/documents/myDocs/index;mode=accounts;documentType=STATEMENTS\n" \
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
 class MH_ChaseCreditCardStatement < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Your credit card statement is ready' &&
