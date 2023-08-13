@@ -427,24 +427,6 @@ class MH_BNYMellonStatement < MessageHandler
   end
 end
 
-class MH_VerizonBill < MessageHandler
-  def self.match(headers)
-    headers['Subject'] == 'Your online bill is ready.' &&
-      headers['From'] == 'Verizon Wireless <VZWMail@ecrmemail.verizonwireless.com>'
-  end
-
-  def handle(message, _headers)
-    payload = (gmail.get_user_message 'me', message.id).payload
-    body = payload.body.data
-    total = body.scan(/Total amount due:.*?(\$\d+\.\d+)/)&.first&.first
-    date = body.scan(%r{Auto Pay date:.*?(\d{2}/\d{2}/\d{4})})&.first&.first
-    make_org_entry 'verizon bill available', 'amex:@quicken', '#C',
-                   "<#{Time.now.strftime('%F %a')}>",
-                   "https://ebillpay.verizonwireless.com/vzw/accountholder/mybill/BillingSummary.action\n" \
-                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}\n#{total}\n#{date}"
-  end
-end
-
 class MH_GoogleFiStatement < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Your Google Fi monthly statement' &&
