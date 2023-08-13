@@ -595,20 +595,6 @@ class MH_AmazonVideoOrder < MessageHandler
   end
 end
 
-class MH_VanguardStatement < MessageHandler
-  def self.match(headers)
-    headers['Subject'] == 'Your Vanguard statement is ready' &&
-      headers['From'] == 'Vanguard <ParticipantServices@vanguard.com>'
-  end
-
-  def handle(message, _headers)
-    make_org_entry 'account statement available', 'vanguard:@quicken', '#C',
-                   "<#{Time.now.strftime('%F %a')}>",
-                   "https://retirementplans.vanguard.com/VGApp/pe/PublicHome\n" \
-                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-  end
-end
-
 class GMailTender < Thor
   no_commands do
     def redirect_output
