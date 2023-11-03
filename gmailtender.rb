@@ -337,7 +337,7 @@ end
 class MH_PershingStatement < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Account Statement Notification' &&
-      headers['From'] == 'pershing@advisor.netxinvestor.com'
+      headers['From'] == 'edelivery@investor.pershing.com'
   end
 
   def handle(message, _headers)
