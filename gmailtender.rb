@@ -15,6 +15,7 @@ require 'google/apis/calendar_v3'
 require 'fileutils'
 require 'logger'
 require 'net/http'
+require 'nokogiri'
 require 'addressable/uri'
 require 'base64'
 require 'thor'
@@ -495,19 +496,22 @@ class MH_UPSMyChoice < MessageHandler
   def self.match(headers)
     (headers['Subject'].include?('UPS Update: Package Scheduled for Delivery') ||
      headers['Subject'].include?('UPS Ship Notification')) &&
-      headers['From'] == 'UPS My Choice <mcinfo@ups.com>'
+      headers['From'] == 'UPS <mcinfo@ups.com>'
   end
 
   def handle(message, _headers)
     payload = (gmail.get_user_message 'me', message.id).payload
     body = payload.parts[0].body.data
+    doc = Nokogiri::HTML(body)
+    delivery = doc.at_css('#deliveryDateTime')
+    date_raw = delivery.children.first.text.strip
+    date = date_raw.match(/\d+\/\d+\/\d+/).to_s
+    times_raw = delivery.children.last.text.strip
+    times = times_raw.split(' - ')
+    tracking = doc.at_css("#trackingNumber").content.strip
 
-    date = body.scan(%r{Scheduled Delivery Date:.*?(\d+/\d+/\d+)})&.first&.first # Scheduled Delivery Date: Friday,  12/04/2020
-    time = body.scan(/Estimated Delivery Time:.*?(\d+:\d+ [AP]\.?M\.?).*?(\d+:\d+ [AP]\.?M\.?)/)&.first # Estimated Delivery Time: 02:45 PM  -  06:45 PM
-    tracking = body.scan(/Tracking Number:.*?([A-Z0-9]+)/)&.first&.first
-
-    if time
-      expected = time.map { |t| Time.strptime("#{date} #{t}", '%m/%d/%Y %I:%M %p') }
+    if times
+      expected = times.map { |t| Time.strptime("#{date} #{t}", '%m/%d/%Y %I:%M %p') }
       make_org_entry "ups delivery of #{tracking}", 'ups:@waiting', '#C',
                      "<#{expected[0].strftime('%F %a %H:%M')}>--<#{expected[1].strftime('%F %a %H:%M')}>",
                      "https://www.ups.com/track?loc=null&tracknum=#{tracking}&requester=WT/trackdetails\n" \
@@ -524,7 +528,7 @@ end
 
 class MH_USPSDelivery < MessageHandler
   def self.match(headers)
-    headers['Subject']&.include?('USPS® Expected Delivery') &&
+    headers['Subject']&.index(/USPS® (Expected|Scheduled) Delivery/) &&
       headers['From'] == 'auto-reply@usps.com'
   end
 
@@ -547,9 +551,9 @@ class MH_USPSDelivery < MessageHandler
                        "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
       else
         _by, date, tracking = headers['Subject'].scan(/Delivery (on|by) (.*?) ([A-Z0-9]+)$/).first
-        expected = DateTime.parse(date)
+        expected = Time.parse(date)
         make_org_entry "usps delivery of #{tracking}", 'usps:@waiting', '#C',
-                       "<#{expected.strftime('%F %a')}>",
+                       "<#{expected.strftime('%F %a %H:%M')}>",
                        "https://tools.usps.com/go/TrackConfirmAction?tLabels=#{tracking}\n" \
                        "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
       end
