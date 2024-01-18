@@ -423,7 +423,7 @@ class MH_BNYMellonStatement < MessageHandler
   def handle(message, _headers)
     make_org_entry 'mortgage statement available', 'bny_mellon:@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
-                   "www.yourmortgageonline.com\n" \
+                   "https://https://www.yourmortgageonline.com/documents/statements\n" \
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
