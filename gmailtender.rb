@@ -204,7 +204,7 @@ class MH_ChaseCheckingStatement < MessageHandler
   def handle(message, _headers)
     make_org_entry 'chase checking statement available', 'chase:@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
-                   "https://secure05a.chase.com/web/auth/dashboard#/dashboard/documents/myDocs/index;mode=accounts;documentType=STATEMENTS\n" \
+                   "https://secure.chase.com/web/auth/nav?navKey=requestStatementsAndDocuments&documentType=STATEMENTS&mode=documents\n" \
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
   end
 end
