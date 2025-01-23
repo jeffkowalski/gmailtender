@@ -2,6 +2,7 @@
 
 source 'https://rubygems.org'
 
+gem 'chronic'
 gem 'google-api-client'
 gem 'googleauth'
 gem 'nokogiri'

@@ -12,6 +12,7 @@ require 'googleauth/stores/file_token_store'
 require 'google/apis/gmail_v1'
 require 'google/apis/calendar_v3'
 
+require 'chronic'
 require 'fileutils'
 require 'logger'
 require 'net/http'
@@ -54,7 +55,7 @@ end
 
 
 class MessageHandler
-  attr_accessor :gmail, :gcal
+  attr_accessor :gmail, :gcal, :options
 
   def initialize(params = {})
     params.each { |key, value| send "#{key}=", value }
@@ -77,6 +78,9 @@ class MessageHandler
 
     http = Net::HTTP.new uri.host, uri.port
     request = Net::HTTP::Get.new uri.path
+
+    return nil if options[:dry_run]
+
     response = http.request(request)
     $logger.error "make_org_entry gave response #{response.code} #{response.message} #{response.body}" if response.code != '200'
 
@@ -103,14 +107,14 @@ class MessageHandler
     gmail.modify_thread 'me', thread.id, mmr
   end
 
-  def self.dispatch(gcal, gmail, message, headers)
+  def self.dispatch(gcal, gmail, options, message, headers)
     $logger.info headers['Subject']
     $logger.info headers['From']
     MessageHandler.descendants.each do |handler|
       $logger.debug "matching #{handler}"
       begin
         if handler.match headers
-          handler.new(gcal: gcal, gmail: gmail).process message, headers
+          handler.new(gcal: gcal, gmail: gmail, options: options).process message, headers
           break
         end
       rescue StandardError => e
@@ -461,7 +465,8 @@ end
 
 class MH_AmazonOrder < MessageHandler
   def self.match(headers)
-    headers['Subject']&.index(/Your Amazon.*? order/) &&
+    (headers['Subject']&.index(/Your Amazon.*? order/) ||
+     headers['Subject']&.index(/^Ordered:/)) &&
       headers['From'] == '"Amazon.com" <auto-confirm@amazon.com>'
   end
 
@@ -470,11 +475,12 @@ class MH_AmazonOrder < MessageHandler
     body = payload.parts[0].body.data
     order = body[/You ordered\s+(".*?")\s*\.\r\n/m, 1] ||
             headers['Subject'][/Your Amazon.*? order of (.*)\./, 1] ||
-            headers['Subject'][/Your Amazon.*? order (#.*)/, 1]
-    url = body[/View or manage your orders in Your Orders:\r\n?(https:.*?)\r\n/m, 1]
-    delivery = body[/\s*((:?(:?Guaranteed|Estimated) delivery date)|(:?Arriving)):\s*\r\n\s*(?<date>.*?)\r\n/m, :date]
-    delivery = (delivery.nil? ? Time.now : Date.parse(delivery)).strftime('%F %a')
-    total = body[/Order Total: (\$.*)\r\n/, 1]
+            headers['Subject'][/Your Amazon.*? order (#.*)/, 1] ||
+            headers['Subject'][/Ordered:\s+"(.*)"/, 1]
+    url = body[/(https:.*order-details.*?)\r\n/m, 1]
+    delivery = body[/\s*((:?(:?Guaranteed|Estimated) delivery date:\s*\r\n)|(:?Arriving))\s*(?<date>.*?)\r\n/m, :date]
+    delivery = (delivery.nil? ? Time.now : Chronic.parse(delivery)).strftime('%F %a')
+    total = body[/Total[:]?[\s\r\n]+\$?(?<total>.*?)[\s\r\n]/m, :total]
     $logger.info "#{order} #{url} #{delivery} #{total}"
 
     detail = "#{url}\n#{total}"
@@ -640,6 +646,7 @@ class GMailTender < Thor
   end
 
   desc 'scan', 'Scan emails'
+  method_option :dry_run, type: :boolean, aliases: '-n', desc: "don't create tasks or change gmail"
   def scan
     auth
 
@@ -661,7 +668,7 @@ class GMailTender < Thor
           headers[header.name] = header.value
         end
 
-        MessageHandler.dispatch @gcal, @gmail, message, headers
+        MessageHandler.dispatch @gcal, @gmail, options, message, headers
       end
 
       #
