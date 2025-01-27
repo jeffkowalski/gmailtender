@@ -141,7 +141,7 @@ class MessageHandler
     name
   end
 
-  def self.refile(gmail, context, thread, message, headers)
+  def self.refile(gmail, options, context, thread, message, headers)
     $logger.info headers['Subject']
     $logger.info headers['From']
 
@@ -152,7 +152,9 @@ class MessageHandler
       full_context = [to, context].join(':')
     end
 
-    handler = MessageHandler.new(gmail: gmail)
+    return if options[:dry_run]
+
+    handler = MessageHandler.new(gmail: gmail, options: options)
     response = handler.make_org_entry headers['Subject'], full_context, '#C',
                                       "<#{Time.now.strftime('%F %a')}>",
                                       "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
@@ -692,7 +694,7 @@ class GMailTender < Thor
             headers[header.name] = header.value
           end
 
-          MessageHandler.refile @gmail, context, thread, message, headers
+          MessageHandler.refile @gmail, options, context, thread, message, headers
         end
       end
     rescue StandardError => e
