@@ -201,6 +201,20 @@ class MH_LGTubClean < MessageHandler
   end
 end
 
+class MH_SchwabStatement < MessageHandler
+  def self.match(headers)
+    headers['Subject']&.include?('Your account eStatement is available') &&
+      headers['From'] == '"Charles Schwab & Co., Inc." <donotreply@mail.schwab.com>'
+  end
+
+  def handle(message, _headers)
+    make_org_entry 'schwab statement available', 'schwab:@quicken', '#C',
+                   "<#{Time.now.strftime('%F %a')}>",
+                   "https://schwab.com/sa_reports\n" \
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
 class MH_ChaseCheckingStatement < MessageHandler
   def self.match(headers)
     headers['Subject']&.include?('Your statement is ready for account ending in') &&
