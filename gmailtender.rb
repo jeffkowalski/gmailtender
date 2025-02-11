@@ -53,7 +53,6 @@ def authorize(interactive)
   credentials
 end
 
-
 class MessageHandler
   attr_accessor :gmail, :gcal, :options
 
@@ -525,15 +524,13 @@ class MH_UPSMyChoice < MessageHandler
     payload = (gmail.get_user_message 'me', message.id).payload
     body = payload.parts[0].body.data
     doc = Nokogiri::HTML(body)
-    tracking = doc.at_css("#trackingNumber").content.strip
+    tracking = doc.at_css('#trackingNumber').content.strip
     delivery = doc.at_css('#deliveryDateTime')
     date_raw = delivery.children.first.text.strip
-    date = date_raw.match(/\d+\/\d+\/\d+/).to_s
+    date = date_raw.match(%r{\d+/\d+/\d+}).to_s
     times_raw = delivery.children.last.text.strip
     time = nil
-    if times_raw.start_with?('by ')
-      time = times_raw[3..-1]
-    end
+    time = times_raw[3..] if times_raw.start_with?('by ')
     times = times_raw.split(' - ')
 
     if time
