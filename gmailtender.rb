@@ -494,8 +494,8 @@ class MH_AmazonOrder < MessageHandler
             headers['Subject'][/Ordered:\s+"(.*)"/, 1]
     url = body[/(https:.*order-details.*?)\r\n/m, 1]
     delivery = body[/\s*((:?(:?Guaranteed|Estimated) delivery date:\s*\r\n)|(:?Arriving))\s*(?<date>.*?)\r\n/m, :date]
-    delivery = (delivery.nil? ? Time.now : Chronic.parse(delivery)).strftime('%F %a')
-    total = body[/Total[:]?[\s\r\n]+\$?(?<total>.*?)[\s\r\n]/m, :total]
+    delivery = (delivery.nil? ? Time.now : (Chronic.parse(delivery) || Time.now)).strftime('%F %a')
+    total = body[/Total:?[\s\r\n]+\$?(?<total>.*?)[\s\r\n]/m, :total]
     $logger.info "#{order} #{url} #{delivery} #{total}"
 
     detail = "#{url}\n#{total}"
