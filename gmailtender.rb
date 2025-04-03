@@ -313,6 +313,20 @@ class MH_PaypalStatement < MessageHandler
   end
 end
 
+class MH_MechanicsBankStatement < MessageHandler
+  def self.match(headers)
+    headers['Subject']&.include?('Savings Statement Availability Notification') &&
+      headers['From'] == 'Mechanics Bank <client_services@mechanicsbank.com>'
+  end
+
+  def handle(message, _headers)
+    make_org_entry 'account statement available', 'mechanics_bank:@quicken', '#C',
+                   "<#{Time.now.strftime('%F %a')}>",
+                   "https://www.mechanicsbankonline.com/dbank/live/app/home\n" \
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
 class MH_CloverReceipt < MessageHandler
   def self.match(headers)
     headers['Subject']&.include?('Your receipt from') &&
