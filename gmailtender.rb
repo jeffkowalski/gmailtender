@@ -297,6 +297,20 @@ class MH_CapitalOneStatement < MessageHandler
   end
 end
 
+class MH_FidelityStatement < MessageHandler
+  def self.match(headers)
+    headers['Subject']&.include?('New account statements and disclosures available') &&
+      headers['From'] == 'Fidelity Investments <Fidelity.Investments@mail.fidelity.com>'
+  end
+
+  def handle(message, _headers)
+    make_org_entry 'account statement available', 'fidelity:@quicken', '#C',
+                   "<#{Time.now.strftime('%F %a')}>",
+                   "https://digital.fidelity.com/ftgw/digital/portfolio/documents/dochub\n" \
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
 class MH_PaypalStatement < MessageHandler
   def self.match(headers)
     headers['Subject']&.include?('Your statement is now available') &&
