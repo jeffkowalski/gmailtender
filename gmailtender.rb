@@ -557,23 +557,39 @@ class MH_UPSMyChoice < MessageHandler
     date_raw = delivery.children.first.text.strip
     date = date_raw.match(%r{\d+/\d+/\d+}).to_s
     times_raw = delivery.children.last.text.strip
+
+    # Handle different time formats
     time = nil
-    time = times_raw[3..] if times_raw.start_with?('by ')
-    times = times_raw.split(' - ')
+    times = nil
+
+    if times_raw.start_with?('by ')
+      # Format: "by 5:00 PM"
+      time = times_raw[3..]
+    elsif times_raw.include?('between') && times_raw.include?(' - ')
+      # Format: "between 2:15 PM - 5:15 PM"
+      time_range = times_raw.gsub(/^between\s+/, '')
+      times = time_range.split(' - ')
+    elsif times_raw.include?(' - ')
+      # Format: "2:15 PM - 5:15 PM" (without "between")
+      times = times_raw.split(' - ')
+    end
 
     if time
+      # Single delivery time
       expected = Time.strptime("#{date} #{time}", '%m/%d/%Y %I:%M %p')
       make_org_entry "ups delivery of #{tracking}", 'ups:@waiting', '#C',
                      "<#{expected.strftime('%F %a %H:%M')}>",
                      "https://www.ups.com/track?loc=null&tracknum=#{tracking}&requester=WT/trackdetails\n" \
                      "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
-    elsif times
-      expected = times.map { |t| Time.strptime("#{date} #{t}", '%m/%d/%Y %I:%M %p') }
+    elsif times && times.length == 2
+      # Time range
+      expected = times.map { |t| Time.strptime("#{date} #{t.strip}", '%m/%d/%Y %I:%M %p') }
       make_org_entry "ups delivery of #{tracking}", 'ups:@waiting', '#C',
                      "<#{expected[0].strftime('%F %a %H:%M')}>--<#{expected[1].strftime('%F %a %H:%M')}>",
                      "https://www.ups.com/track?loc=null&tracknum=#{tracking}&requester=WT/trackdetails\n" \
                      "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
     else
+      # Fallback to date only
       expected = Date.strptime(date, '%m/%d/%Y')
       make_org_entry "ups delivery of #{tracking}", 'ups:@waiting', '#C',
                      "<#{expected.strftime('%F %a')}>",
