@@ -6,8 +6,8 @@ gem 'chronic'
 gem 'google-api-client'
 gem 'googleauth'
 gem 'nokogiri'
+gem 'pstore' # Add this to silence Ruby 3.5+ warning
 gem 'thor'
-gem 'pstore'  # Add this to silence Ruby 3.5+ warning
 
 # for robe:
 gem 'method_source'
