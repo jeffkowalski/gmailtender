@@ -20,7 +20,6 @@ require 'nokogiri'
 require 'addressable/uri'
 require 'base64'
 require 'thor'
-require 'resolv-replace'
 
 LOGFILE = File.join(Dir.home, '.log', 'gmailtender.log')
 
