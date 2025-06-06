@@ -7,21 +7,18 @@
 #            https://console.developers.google.com
 # Google API Ruby Client:  https://github.com/google/google-api-ruby-client
 
+require 'bundler/setup'
+Bundler.require(:default)
+
 require 'googleauth'
 require 'googleauth/stores/file_token_store'
 require 'google/apis/gmail_v1'
 require 'google/apis/calendar_v3'
 
-require 'chronic'
 require 'fileutils'
-require 'logger'
 require 'net/http'
-require 'nokogiri'
 require 'addressable/uri'
 require 'base64'
-require 'thor'
-
-LOGFILE = File.join(Dir.home, '.log', 'gmailtender.log')
 
 BASE_URI = 'https://www.google.com'
 APPLICATION_NAME = 'gmailtender'
@@ -653,35 +650,9 @@ class MH_AmazonVideoOrder < MessageHandler
   end
 end
 
-class GMailTender < Thor
-  no_commands do
-    def redirect_output
-      unless LOGFILE == 'STDOUT'
-        logfile = File.expand_path(LOGFILE)
-        FileUtils.mkdir_p(File.dirname(logfile), mode: 0o755)
-        FileUtils.touch logfile
-        File.chmod 0o644, logfile
-        $stdout.reopen logfile, 'a'
-      end
-      $stderr.reopen $stdout
-      $stdout.sync = $stderr.sync = true
-    end
-
-    def setup_logger
-      redirect_output if options[:log]
-
-      $logger = Logger.new $stdout
-      $logger.level = options[:verbose] ? Logger::DEBUG : Logger::INFO
-      $logger.info 'starting'
-    end
-  end
-
-  class_option :log,     type: :boolean, default: true, desc: "log output to #{LOGFILE}"
-  class_option :verbose, type: :boolean, aliases: '-v', desc: 'increase verbosity'
-
+class GMailTender < ScannerBotBase
   desc 'auth', 'Authorize the application with google services'
   def auth
-    setup_logger
     #
     # initialize the API
     #
@@ -695,32 +666,28 @@ class GMailTender < Thor
       service.client_options.application_name = APPLICATION_NAME
       service.authorization = authorize !options[:log]
       @gcal = service
-    rescue StandardError => e
-      $logger.error e.message
-      $logger.error e.backtrace.inspect
     end
   end
 
-  desc 'scan', 'Scan emails'
-  method_option :dry_run, type: :boolean, aliases: '-n', desc: "don't create tasks or change gmail"
-  def scan
-    auth
+  no_commands do
+    def main
+      $logger = @logger # hack
+      auth
 
-    begin
       #
       # scan unread inbox messages
       #
       messages = (@gmail.list_user_messages 'me', q: 'in:inbox is:unread').messages
 
-      $logger.info "#{messages.nil? ? 'no' : messages.length} unread messages found in inbox"
+      @logger.info "#{messages.nil? ? 'no' : messages.length} unread messages found in inbox"
 
       messages&.each do |message|
-        $logger.debug "- #{message.id}"
+        @logger.debug "- #{message.id}"
 
         headers = {}
         content = (@gmail.get_user_message 'me', message.id).payload
         content.headers.each do |header|
-          $logger.debug "#{header.name} => #{header.value}"
+          @logger.debug "#{header.name} => #{header.value}"
           headers[header.name] = header.value
         end
 
@@ -733,30 +700,25 @@ class GMailTender < Thor
       ['@agendas', '@calls', '@errands', '@home', '@quicken', '@view', '@waiting', '@work'].each do |context|
         threads = (@gmail.list_user_threads 'me', q: "in:#{context}").threads
 
-        $logger.info "#{threads.nil? ? 'no' : threads.length} messages found in #{context}"
+        @logger.info "#{threads.nil? ? 'no' : threads.length} messages found in #{context}"
 
         threads&.each do |thread|
           # find most recent message in thread list
           messages = (@gmail.get_user_thread 'me', thread.id, fields: 'messages(id,internalDate)').messages
           message = messages.max_by(&:internal_date)
-          $logger.debug "- #{message.id}"
+          @logger.debug "- #{message.id}"
 
           headers = {}
           content = (@gmail.get_user_message 'me', message.id).payload
           content.headers.each do |header|
-            $logger.debug "#{header.name} => #{header.value}"
+            @logger.debug "#{header.name} => #{header.value}"
             headers[header.name] = header.value
           end
 
           MessageHandler.refile @gmail, options, context, thread, message, headers
         end
       end
-    rescue StandardError => e
-      $logger.error e.message
-      $logger.error e.backtrace.inspect
     end
-
-    $logger.info 'done'
   end
 end
 
