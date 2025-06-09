@@ -337,6 +337,20 @@ class MH_MechanicsBankStatement < MessageHandler
   end
 end
 
+class MH_REIMastercardStatement < MessageHandler
+  def self.match(headers)
+    headers['Subject']&.include?('Your REI Co-op Mastercard statement is ready') &&
+      headers['From']&.include?('<capitalone@notification.capitalone.com>')
+  end
+
+  def handle(message, _headers)
+    make_org_entry 'account statement available', 'rei:@quicken', '#C',
+                   "<#{Time.now.strftime('%F %a')}>",
+                   "https://myaccounts.capitalone.com/accountSummary\n" \
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
 class MH_CloverReceipt < MessageHandler
   def self.match(headers)
     headers['Subject']&.include?('Your receipt from') &&
