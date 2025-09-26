@@ -512,7 +512,7 @@ class MH_WholeFoodsHandler < MessageHandler
     payload = (gmail.get_user_message 'me', message.id).payload
     body = payload.parts[0].body.data
     total = body.scan(/\* Total - (\$[\d.]+)/)&.first&.first
-    make_org_entry 'whole foods market receipt', ':@quicken', '#C',
+    make_org_entry 'whole foods market receipt', '@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
                    "#{total}\n" \
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
