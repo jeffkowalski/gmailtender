@@ -502,6 +502,23 @@ class MH_FastrakStatement < MessageHandler
   end
 end
 
+class MH_WholeFoodsHandler < MessageHandler
+  def self.match(headers)
+    headers['Subject'] == 'Your Whole Foods Market Receipt' &&
+      headers['From'] == 'Whole Foods Market <wholefoodsmarket@mail.wholefoodsmarket.com>'
+  end
+
+  def handle(message, _headers)
+    payload = (gmail.get_user_message 'me', message.id).payload
+    body = payload.parts[0].body.data
+    total = body.scan(/\* Total - (\$[\d.]+)/)&.first&.first
+    make_org_entry 'whole foods market receipt', ':@quicken', '#C',
+                   "<#{Time.now.strftime('%F %a')}>",
+                   "#{total}\n" \
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
 class MH_GoogleFiStatement < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Your Google Fi monthly statement' &&
