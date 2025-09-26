@@ -485,6 +485,23 @@ class MH_BNYMellonStatement < MessageHandler
   end
 end
 
+class MH_FastrakStatement < MessageHandler
+  def self.match(headers)
+    headers['Subject'] == 'Bay Area FasTrak Statement' &&
+      headers['From'] == 'no_reply@bayareafastrak.org'
+  end
+
+  def handle(message, _headers)
+    payload = (gmail.get_user_message 'me', message.id).payload
+    body = payload.parts[0].body.data
+    url = body.scan(/copy and paste this URL into your browser: (.*?)\.\s/)&.first&.first
+    make_org_entry 'fastrak statement available', 'fastrak:@home', '#C',
+                   "<#{Time.now.strftime('%F %a')}>",
+                   "#{url}\n" \
+                   "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
 class MH_GoogleFiStatement < MessageHandler
   def self.match(headers)
     headers['Subject'] == 'Your Google Fi monthly statement' &&
