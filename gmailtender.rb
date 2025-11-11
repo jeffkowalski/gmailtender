@@ -226,8 +226,8 @@ end
 
 class MH_ChaseCreditCardStatement < MessageHandler
   def self.match(headers)
-    headers['Subject'] == 'Your credit card statement is ready' &&
-      headers['From'] == 'Chase <no-reply@alertsp.chase.com>'
+    headers['Subject'] == 'Your credit card statement is available' &&
+      headers['From'] == 'Chase <no.reply.alerts@chase.com>'
   end
 
   def handle(message, _headers)
