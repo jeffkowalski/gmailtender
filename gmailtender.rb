@@ -263,8 +263,8 @@ end
 
 class MH_EbmudBill < MessageHandler
   def self.match(headers)
-    headers['Subject'] == 'Your EBMUD bill is available online.' &&
-      headers['From'] == 'noreply@ebmud.com'
+    headers['Subject'] == 'Your EBMUD bill is available online' &&
+      headers['From'] == 'noreply@paymentcenter.ebmud.com'
   end
 
   def handle(message, _headers)
