@@ -646,7 +646,7 @@ end
 class MH_USPSDelivery < MessageHandler
   def self.match(headers)
     headers['Subject']&.index(/USPS® (Expected|Scheduled) Delivery/) &&
-      headers['From'] == 'auto-reply@usps.com'
+      headers['From'] == 'USPS Tracking <auto-reply@tracking.usps.com>'
   end
 
   def handle(message, headers)
