@@ -371,6 +371,23 @@ class MH_CloverReceipt < MessageHandler
   end
 end
 
+class MH_LowesReceipt < MessageHandler
+  def self.match(headers)
+    headers['Subject'] == "Your Lowe's Purchase Receipt" &&
+      headers['From'] == "\"Lowe's Home Improvement\" <do-not-reply@receipt.lowes.com>"
+  end
+
+  def handle(message, _headers)
+    payload = (gmail.get_user_message 'me', message.id).payload
+    body = payload.body.data
+
+    amount = body[/>Payment<.*?>(\$\s*[0-9.]+)</, 1].to_s
+    make_org_entry "lowe's purchase receipt", '@quicken', '#C',
+                   "<#{Time.now.strftime('%F %a')}>",
+                   "#{amount}\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
+  end
+end
+
 class MH_SquareReceipt < MessageHandler
   def self.match(headers)
     headers['Subject']&.include?('Receipt from') &&
