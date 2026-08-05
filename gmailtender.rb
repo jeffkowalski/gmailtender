@@ -574,28 +574,40 @@ class MH_AmazonOrder < MessageHandler
       headers['From'] == '"Amazon.com" <auto-confirm@amazon.com>'
   end
 
+  def delivery_date(arriving)
+    # "today 5 PM – 10 PM", "overnight 4 AM – 8 AM", "tomorrow", "Friday"
+    date = arriving.sub(/\s*\d{1,2}(:\d{2})?\s*[AP]M.*\z/, '')
+    date = 'tomorrow' if date =~ /overnight/i
+    (Chronic.parse(date) || Time.now).strftime('%F %a')
+  end
+
   def handle(message, headers)
     payload = (gmail.get_user_message 'me', message.id).payload
     body = payload.parts[0].body.data
-    order = body[/You ordered\s+(".*?")\s*\.\r\n/m, 1] ||
+    order = headers['Subject'][/Ordered:\s+(.*)/, 1]&.delete('⁦⁩')&.strip ||
             headers['Subject'][/Your Amazon.*? order of (.*)\./, 1] ||
-            headers['Subject'][/Your Amazon.*? order (#.*)/, 1] ||
-            headers['Subject'][/Ordered:\s+"(.*)"/, 1]
-    url = body[/(https:\/\/www.amazon.com\/gp\/css\/order-details.*?)\r\n/m, 1]
-    delivery = body[/\s*((:?(:?Guaranteed|Estimated) delivery date:\s*\r\n)|(:?Arriving))\s*(?<date>.*?)\r\n/m, :date]
-    delivery = (delivery.nil? ? Time.now : (Chronic.parse(delivery) || Time.now)).strftime('%F %a')
-    total = body[/Total:?[\s\r\n]+\$?(?<total>.*?)[\s\r\n]/m, :total]
-    $logger.info "#{order} #{url} #{delivery} #{total}"
+            headers['Subject'][/Your Amazon.*? order (#.*)/, 1]
 
-    detail = "#{url}\n#{total}"
-    response = make_org_entry "order of #{order}", 'amazon:@quicken', '#C',
-                              "<#{Time.now.strftime('%F %a')}>",
-                              "#{detail}\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
-    if response
-      detail = url
-      response = make_org_entry "delivery of #{order}", 'amazon:@waiting', '#C',
+    # one email can contain several orders, each with its own arrival, number and total
+    orders = body.scan(/Arriving\s+(.*?)\r\n.*?Order #\r\n([\d-]+).*?Grand Total:\r\n(\S+)/m)
+    $logger.error "no order blocks found in message #{message.id}" if orders.empty?
+
+    response = nil
+    orders.each do |arriving, number, total|
+      label = orders.length > 1 ? "#{order} ##{number}" : order
+      url = "https://www.amazon.com/your-orders/order-details?orderID=#{number}"
+      delivery = delivery_date arriving
+      $logger.info "#{label} #{url} #{delivery} #{total}"
+
+      response = make_org_entry "order of #{label}", 'amazon:@quicken', '#C',
+                                "<#{Time.now.strftime('%F %a')}>",
+                                "#{url}\n#{total}\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
+      break unless response
+
+      response = make_org_entry "delivery of #{label}", 'amazon:@waiting', '#C',
                                 "<#{delivery}>",
-                                "#{detail}\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
+                                "#{url}\nhttps://mail.google.com/mail/u/0/#inbox/#{message.id}"
+      break unless response
     end
 
     response
