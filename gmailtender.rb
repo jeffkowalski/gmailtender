@@ -570,7 +570,7 @@ end
 class MH_AmazonOrder < MessageHandler
   def self.match(headers)
     (headers['Subject']&.index(/Your Amazon.*? order/) ||
-     headers['Subject']&.index(/^Ordered:/)) &&
+     headers['Subject']&.index(/^Ordered(?: \d+ items?)?:/)) &&
       headers['From'] == '"Amazon.com" <auto-confirm@amazon.com>'
   end
 
@@ -584,7 +584,7 @@ class MH_AmazonOrder < MessageHandler
   def handle(message, headers)
     payload = (gmail.get_user_message 'me', message.id).payload
     body = payload.parts[0].body.data
-    order = headers['Subject'][/Ordered:\s+(.*)/, 1]&.delete('⁦⁩')&.strip ||
+    order = headers['Subject'][/Ordered(?: \d+ items?)?:\s+(.*)/, 1]&.delete('⁦⁩')&.strip ||
             headers['Subject'][/Your Amazon.*? order of (.*)\./, 1] ||
             headers['Subject'][/Your Amazon.*? order (#.*)/, 1]
 
