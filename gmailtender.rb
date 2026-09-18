@@ -476,7 +476,7 @@ end
 
 class MH_AmericanExpressStatement < MessageHandler
   def self.match(headers)
-    headers['Subject']&.index(/Your .* Statement/) &&
+    headers['Subject']&.index(/Your .* Statement/i) &&
       headers['From'] == 'American Express <AmericanExpress@welcome.americanexpress.com>'
   end
 
