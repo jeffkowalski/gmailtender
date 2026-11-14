@@ -467,7 +467,7 @@ class MH_PeetsReload < MessageHandler
   end
 
   def handle(message, _headers)
-    make_org_entry 'peet\'s card reload order', ':@quicken', '#C',
+    make_org_entry 'peet\'s card reload order', '@quicken', '#C',
                    "<#{Time.now.strftime('%F %a')}>",
                    "$50\n" \
                    "https://mail.google.com/mail/u/0/#inbox/#{message.id}"
